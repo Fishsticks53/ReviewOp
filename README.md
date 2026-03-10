@@ -20,3 +20,20 @@
 2. npm install  
 3. npm run dev  
 4. try it out  
+
+## Graph Views
+
+- Single review explanation graph:
+  1. Start backend and frontend.
+  2. Submit a review in the `Single Review` form.
+  3. Open the `Review Explanation` graph mode on the dashboard.
+
+- Batch / corpus aspect graph:
+  1. Upload a CSV in the `Batch CSV` form.
+  2. Switch to `Corpus Analytics` graph mode.
+  3. Use the graph filter bar to change `domain`, `product_id`, date range, and minimum edge weight.
+
+## Graph API
+
+- `GET /graph/review/{review_id}` returns the single-review explanation graph.
+- `GET /graph/aspects` returns the batch co-occurrence graph.

@@ -68,3 +68,20 @@ export async function getTrends(interval = "day") {
 export async function getKgCentrality(limit = 20) {
   return request(`/analytics/kg/centrality?limit=${limit}`);
 }
+
+export async function getReviewGraph(reviewId) {
+  return request(`/graph/review/${reviewId}`);
+}
+
+export async function getBatchAspectGraph(filters = {}) {
+  const params = new URLSearchParams();
+
+  if (filters.domain) params.set("domain", filters.domain);
+  if (filters.product_id) params.set("product_id", filters.product_id);
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
+  params.set("min_edge_weight", String(filters.min_edge_weight || 1));
+
+  const query = params.toString();
+  return request(`/graph/aspects${query ? `?${query}` : ""}`);
+}

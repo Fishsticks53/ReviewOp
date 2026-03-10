@@ -116,3 +116,39 @@ class EdgeOut(BaseModel):
     dst: str
     edge_type: str
     weight: float
+
+
+class GraphNodeOut(BaseModel):
+    id: str
+    label: str
+    sentiment: Optional[str] = None
+    confidence: Optional[float] = None
+    frequency: Optional[int] = None
+    avg_sentiment: Optional[float] = None
+    dominant_sentiment: Optional[str] = None
+    negative_ratio: Optional[float] = None
+    explicit_count: int = 0
+    implicit_count: int = 0
+    evidence: Optional[str] = None
+    evidence_start: Optional[int] = None
+    evidence_end: Optional[int] = None
+    origin: Optional[str] = None
+
+
+class GraphEdgeOut(BaseModel):
+    source: str
+    target: str
+    type: str
+    weight: float = 1.0
+    directional: bool = False
+    pair_count: Optional[int] = None
+    polarity_hint: Optional[str] = None
+
+
+class GraphResponseOut(BaseModel):
+    scope: str
+    review_id: Optional[int] = None
+    generated_at: Optional[str] = None
+    filters: dict = Field(default_factory=dict)
+    nodes: List[GraphNodeOut] = Field(default_factory=list)
+    edges: List[GraphEdgeOut] = Field(default_factory=list)

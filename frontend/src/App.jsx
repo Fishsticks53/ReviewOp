@@ -8,9 +8,13 @@ import {
   getAspectSentimentDistribution,
   getTrends,
   getKgCentrality,
+  getReviewGraph,
+  getBatchAspectGraph,
 } from "./api/client";
 import DataGridTable from "./components/DataGridTable";
 import { SingleSentimentChart, TrendsChart } from "./components/Charts";
+import AspectGraphView from "./components/graph/AspectGraphView";
+import GraphModeToggle from "./components/graph/GraphModeToggle";
 
 function short(n) {
   if (n === null || n === undefined) return "-";
@@ -61,6 +65,106 @@ function buildSingleAnalytics(singleOut) {
   };
 }
 
+function buildSingleGraphFallback(singleOut) {
+  if (!singleOut?.review_id) return null;
+  const predictions = Array.isArray(singleOut?.predictions) ? singleOut.predictions : [];
+  if (!predictions.length) return { scope: "single_review", review_id: singleOut.review_id, nodes: [], edges: [] };
+
+  const nodesById = new Map();
+  const orderedMentions = [];
+
+  predictions.forEach((prediction, index) => {
+    const aspectId = (prediction?.aspect_cluster || prediction?.aspect_raw || `aspect-${index}`).toString().trim() || `aspect-${index}`;
+    const evidence = prediction?.evidence_spans?.[0] || null;
+    const start = Number.isFinite(Number(evidence?.start_char)) ? Number(evidence.start_char) : index;
+    const end = Number.isFinite(Number(evidence?.end_char)) ? Number(evidence.end_char) : start;
+    const sentiment = (prediction?.sentiment || "neutral").toString().toLowerCase();
+    const confidence = Number(prediction?.confidence || 0);
+
+    orderedMentions.push({ start, aspectId });
+
+    const current = nodesById.get(aspectId);
+    if (!current) {
+      nodesById.set(aspectId, {
+        id: aspectId,
+        label: aspectId,
+        sentiment,
+        confidence: Number.isFinite(confidence) ? confidence : 0,
+        explicit_count: 0,
+        implicit_count: 0,
+        evidence: evidence?.snippet || null,
+        evidence_start: Number.isFinite(start) ? start : null,
+        evidence_end: Number.isFinite(end) ? end : null,
+        _mentions: 1,
+      });
+      return;
+    }
+
+    current._mentions += 1;
+    current.confidence =
+      ((Number(current.confidence || 0) * (current._mentions - 1)) + (Number.isFinite(confidence) ? confidence : 0)) /
+      current._mentions;
+    if ((current.evidence_start ?? Number.POSITIVE_INFINITY) > start) {
+      current.evidence = evidence?.snippet || current.evidence;
+      current.evidence_start = Number.isFinite(start) ? start : current.evidence_start;
+      current.evidence_end = Number.isFinite(end) ? end : current.evidence_end;
+    }
+  });
+
+  const orderedAspects = orderedMentions
+    .sort((a, b) => a.start - b.start)
+    .map((item) => item.aspectId);
+
+  const transitionWeights = new Map();
+  for (let i = 0; i < orderedAspects.length - 1; i += 1) {
+    const source = orderedAspects[i];
+    const target = orderedAspects[i + 1];
+    if (!source || !target || source === target) continue;
+    const key = `${source}__${target}`;
+    transitionWeights.set(key, (transitionWeights.get(key) || 0) + 1);
+  }
+
+  const nodes = Array.from(nodesById.values()).map((node) => {
+    const mentions = Math.max(Number(node._mentions || 1), 1);
+    return {
+      id: node.id,
+      label: node.label,
+      sentiment: node.sentiment || "neutral",
+      confidence: Number(node.confidence || 0),
+      explicit_count: Number(node.explicit_count || 0),
+      implicit_count: Number(node.implicit_count || 0),
+      evidence: node.evidence || null,
+      evidence_start: node.evidence_start,
+      evidence_end: node.evidence_end,
+      origin: mentions > 1 ? "mixed" : "explicit",
+    };
+  });
+
+  const sentimentById = new Map(nodes.map((node) => [node.id, node.sentiment]));
+  const edges = Array.from(transitionWeights.entries()).map(([key, weight]) => {
+    const [source, target] = key.split("__");
+    const src = sentimentById.get(source) || "neutral";
+    const dst = sentimentById.get(target) || "neutral";
+    const polarityHint = src === dst ? src : src === "negative" || dst === "negative" ? "negative" : "mixed";
+    return {
+      source,
+      target,
+      type: "review_transition",
+      weight: Number(weight || 1),
+      directional: true,
+      pair_count: Number(weight || 1),
+      polarity_hint: polarityHint,
+    };
+  });
+
+  return {
+    scope: "single_review",
+    review_id: singleOut.review_id,
+    nodes,
+    edges,
+  };
+}
+
 function StatTile({ title, value, subtitle, tone }) {
   const tones = {
     violet: "from-violet-700 via-indigo-600 to-indigo-500",
@@ -82,12 +186,24 @@ function cardClass(isDark) {
   return `rounded-2xl border p-5 ${isDark ? "border-slate-800 bg-[#0b1220]" : "border-slate-200 bg-white"}`;
 }
 
+const initialGraphFilters = {
+  domain: "",
+  product_id: "",
+  from: "",
+  to: "",
+  min_edge_weight: 2,
+};
+
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem("reviewop-theme") || "dark");
   const isDark = theme === "dark";
 
   const [reviewText, setReviewText] = useState("");
   const [singleOutput, setSingleOutput] = useState(null);
+  const [reviewGraph, setReviewGraph] = useState(null);
+  const [batchGraph, setBatchGraph] = useState(null);
+  const [graphMode, setGraphMode] = useState("batch");
+  const [graphFilters, setGraphFilters] = useState(initialGraphFilters);
   const [batchFile, setBatchFile] = useState(null);
   const [jobStatus, setJobStatus] = useState(null);
   const [overview, setOverview] = useState(null);
@@ -96,6 +212,7 @@ export default function App() {
   const [trends, setTrends] = useState([]);
   const [centrality, setCentrality] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [graphLoading, setGraphLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -108,7 +225,21 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem("reviewop-theme", theme);
+    document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        await refreshAnalytics();
+        await refreshBatchGraph(initialGraphFilters);
+      } catch {
+        // Keep initial render usable even if backend has no data yet.
+      }
+    };
+
+    load();
+  }, []);
 
   const sentimentCounts = useMemo(() => {
     if (!overview?.sentiment_counts) return { positive: 0, neutral: 0, negative: 0 };
@@ -122,6 +253,7 @@ export default function App() {
   function clearDashboardData() {
     setError("");
     setSingleOutput(null);
+    setReviewGraph(null);
     setJobStatus(null);
     setOverview(null);
     setTopAspects([]);
@@ -146,6 +278,16 @@ export default function App() {
     setCentrality(c || []);
   }
 
+  async function refreshBatchGraph(nextFilters = graphFilters) {
+    setGraphLoading(true);
+    try {
+      const graph = await getBatchAspectGraph(nextFilters);
+      setBatchGraph(graph);
+    } finally {
+      setGraphLoading(false);
+    }
+  }
+
   async function handleSingleSubmit(e) {
     e.preventDefault();
     clearDashboardData();
@@ -157,6 +299,14 @@ export default function App() {
       setOverview(local.overview);
       setTopAspects(local.topAspects);
       setAspectDist(local.aspectDist);
+      setGraphMode("single_review");
+
+      try {
+        const graph = await getReviewGraph(out.review_id);
+        setReviewGraph(graph);
+      } catch (graphEx) {
+        setError(`Review processed, but graph load failed: ${graphEx.message || "Unknown error"}`);
+      }
     } catch (ex) {
       setError(ex.message || "Single review inference failed");
     } finally {
@@ -190,11 +340,24 @@ export default function App() {
       }
 
       await refreshAnalytics();
+      await refreshBatchGraph(graphFilters);
+      setGraphMode("batch");
       setOverview((prev) => (prev ? { ...prev, total_reviews: latest.total ?? prev.total_reviews } : prev));
     } catch (ex) {
       setError(ex.message || "Batch CSV inference failed");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function applyBatchGraphFilters(e) {
+    e.preventDefault();
+    setError("");
+    setGraphMode("batch");
+    try {
+      await refreshBatchGraph(graphFilters);
+    } catch (ex) {
+      setError(ex.message || "Batch graph load failed");
     }
   }
 
@@ -222,6 +385,8 @@ export default function App() {
   const topAspectRows = topAspects.map((r, i) => ({ id: `${r.aspect}-${i}`, ...r }));
   const aspectDistRows = aspectDist.map((r, i) => ({ id: `${r.aspect}-${i}`, ...r }));
   const centralityRows = centrality.map((r, i) => ({ id: `${r.aspect}-${i}`, ...r }));
+  const singleGraphFallback = useMemo(() => buildSingleGraphFallback(singleOutput), [singleOutput]);
+  const activeGraph = graphMode === "single_review" ? reviewGraph || singleGraphFallback : batchGraph;
 
   return (
     <div className={`min-h-screen ${isDark ? "bg-[#060b18] text-slate-100" : "bg-[#f1f5f9] text-slate-800"}`}>
@@ -312,6 +477,87 @@ export default function App() {
         <section className="mt-6 grid gap-4 lg:grid-cols-2">
           <SingleSentimentChart predictions={singleOutput?.predictions || []} isDark={isDark} />
           <TrendsChart data={trends} isDark={isDark} />
+        </section>
+
+        <section className={`mt-6 ${cardClass(isDark)}`}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-500">Aspect Graphs</p>
+              <h3 className="mt-1 text-2xl font-semibold">Interactive Aspect Relationship Views</h3>
+              <p className={`mt-2 text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                Shared visual language, separate graph semantics for single-review explanation and corpus analytics.
+              </p>
+            </div>
+            <GraphModeToggle value={graphMode} onChange={setGraphMode} isDark={isDark} />
+          </div>
+
+          <form onSubmit={applyBatchGraphFilters} className={`mt-5 rounded-2xl border p-4 ${isDark ? "border-slate-800 bg-[#08101f]" : "border-slate-200 bg-slate-50"}`}>
+            <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
+              <label className="flex-1 min-w-[140px] text-sm">
+                <span className="mb-1 block font-medium">Domain</span>
+                <input
+                  value={graphFilters.domain}
+                  onChange={(e) => setGraphFilters((prev) => ({ ...prev, domain: e.target.value }))}
+                  className={`w-full rounded-xl border px-3 py-2 ${isDark ? "border-slate-700 bg-[#0f172a]" : "border-slate-200 bg-white"}`}
+                  placeholder="electronics"
+                />
+              </label>
+              <label className="flex-1 min-w-[140px] text-sm">
+                <span className="mb-1 block font-medium">Product ID</span>
+                <input
+                  value={graphFilters.product_id}
+                  onChange={(e) => setGraphFilters((prev) => ({ ...prev, product_id: e.target.value }))}
+                  className={`w-full rounded-xl border px-3 py-2 ${isDark ? "border-slate-700 bg-[#0f172a]" : "border-slate-200 bg-white"}`}
+                  placeholder="sku-42"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block font-medium">From</span>
+                <input
+                  type="date"
+                  value={graphFilters.from}
+                  onChange={(e) => setGraphFilters((prev) => ({ ...prev, from: e.target.value }))}
+                  className={`rounded-xl border px-3 py-2 ${isDark ? "border-slate-700 bg-[#0f172a]" : "border-slate-200 bg-white"}`}
+                />
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block font-medium">To</span>
+                <input
+                  type="date"
+                  value={graphFilters.to}
+                  onChange={(e) => setGraphFilters((prev) => ({ ...prev, to: e.target.value }))}
+                  className={`rounded-xl border px-3 py-2 ${isDark ? "border-slate-700 bg-[#0f172a]" : "border-slate-200 bg-white"}`}
+                />
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block font-medium">Min Edge Weight</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={graphFilters.min_edge_weight}
+                  onChange={(e) => setGraphFilters((prev) => ({ ...prev, min_edge_weight: Number(e.target.value || 1) }))}
+                  className={`w-28 rounded-xl border px-3 py-2 ${isDark ? "border-slate-700 bg-[#0f172a]" : "border-slate-200 bg-white"}`}
+                />
+              </label>
+              <button type="submit" disabled={graphLoading} className="rounded-xl bg-emerald-500 px-5 py-2.5 font-semibold text-slate-950 hover:bg-emerald-400 disabled:opacity-60">
+                {graphLoading ? "Loading..." : "Apply Batch Filters"}
+              </button>
+            </div>
+          </form>
+
+          <div className="mt-5">
+            <AspectGraphView
+              graph={activeGraph}
+              scope={graphMode}
+              isDark={isDark}
+              reviewText={singleOutput?.review_id ? reviewText : ""}
+              emptyMessage={
+                graphMode === "single_review"
+                  ? "Run single-review inference to render the explanation graph."
+                  : "Upload a batch CSV or apply filters to render the corpus graph."
+              }
+            />
+          </div>
         </section>
 
         <section className={`mt-6 ${cardClass(isDark)}`}>
