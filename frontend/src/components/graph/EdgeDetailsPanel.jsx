@@ -31,6 +31,16 @@ export default function EdgeDetailsPanel({ edge, scope = "batch", isDark = false
               </div>
             ) : null}
           </div>
+          {scope === "batch" && Array.isArray(edge.example_reviews) && edge.example_reviews.length ? (
+            <div className={`mt-4 rounded-xl p-3 text-sm ${isDark ? "bg-slate-900 text-slate-200" : "bg-slate-50 text-slate-700"}`}>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Example Reviews</p>
+              {edge.example_reviews.map((item, idx) => (
+                <p key={`${edge.source}-${idx}`} className="mb-2 last:mb-0">
+                  {item}
+                </p>
+              ))}
+            </div>
+          ) : null}
         </>
       ) : (
         <p className={`mt-3 text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
