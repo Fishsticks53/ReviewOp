@@ -1,0 +1,66 @@
+{
+  "domains": {
+    "telecom": {
+      "aspects": [
+        "network",
+        "call_quality",
+        "internet_speed",
+        "signal_coverage"
+      ]
+    },
+    "electronics": {
+      "aspects": [
+        "battery",
+        "charging",
+        "performance",
+        "heating",
+        "display",
+        "audio",
+        "connectivity",
+        "durability"
+      ]
+    },
+    "ecommerce": {
+      "aspects": [
+        "delivery",
+        "packaging",
+        "return_refund",
+        "seller_reliability"
+      ]
+    },
+    "restaurant": {
+      "aspects": [
+        "food_quality",
+        "service_speed",
+        "ambience",
+        "portion_size"
+      ]
+    },
+    "hotel": {
+      "aspects": [
+        "cleanliness",
+        "room_comfort",
+        "staff_behavior",
+        "location_convenience"
+      ]
+    },
+    "ride_hailing": {
+      "aspects": [
+        "driver_behavior",
+        "pickup_delay",
+        "route_efficiency",
+        "ride_comfort"
+      ]
+    },
+    "grocery": {
+      "aspects": [
+        "freshness",
+        "availability",
+        "expiry_quality",
+        "pricing",
+        "substitution_quality",
+        "order_accuracy"
+      ]
+    }
+  }
+}
