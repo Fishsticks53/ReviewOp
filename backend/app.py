@@ -5,7 +5,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from core.db import engine, Base, get_db
+from core.db import engine, Base, get_db, SessionLocal
 from core.config import settings
 from models.tables import Review, Prediction, EvidenceSpan
 from models.schemas import InferReviewIn, InferReviewOut, PredictionOut, EvidenceSpanOut
@@ -17,6 +17,7 @@ from routes.analytics import router as analytics_router
 from routes.graph import router as graph_router
 from routes.jobs import router as jobs_router
 from routes.infer import router as infer_router
+from routes.user_portal import router as user_portal_router, seed_default_accounts
 
 
 app = FastAPI(title="Proto ReviewOps MVP (Phase 1-2)", version="0.3.0")
@@ -25,6 +26,11 @@ app = FastAPI(title="Proto ReviewOps MVP (Phase 1-2)", version="0.3.0")
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        seed_default_accounts(db)
+    finally:
+        db.close()
     app.state.seq2seq_engine = Seq2SeqEngine.load()
 
 
@@ -112,3 +118,4 @@ app.include_router(infer_router)  # contains /infer/csv
 app.include_router(jobs_router)
 app.include_router(analytics_router)
 app.include_router(graph_router)
+app.include_router(user_portal_router)

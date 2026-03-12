@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
         "/jobs": { target: backendTarget, changeOrigin: true },
         "/analytics": { target: backendTarget, changeOrigin: true },
         "/graph": { target: backendTarget, changeOrigin: true },
+        "/user": { target: backendTarget, changeOrigin: true },
       },
     },
   };

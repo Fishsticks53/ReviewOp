@@ -1,5 +1,5 @@
 # proto/backend/models/schemas.py
-from typing import List, Optional
+from typing import List, Optional, Literal
 from pydantic import BaseModel, Field
 
 
@@ -245,3 +245,88 @@ class GraphResponseOut(BaseModel):
     filters: dict = Field(default_factory=dict)
     nodes: List[GraphNodeOut] = Field(default_factory=list)
     edges: List[GraphEdgeOut] = Field(default_factory=list)
+
+
+class AuthRegisterIn(BaseModel):
+    username: str = Field(min_length=3, max_length=80)
+    password: str = Field(min_length=5, max_length=120)
+
+
+class AuthLoginIn(BaseModel):
+    username: str = Field(min_length=3, max_length=80)
+    password: str = Field(min_length=5, max_length=120)
+
+
+class AuthUserOut(BaseModel):
+    id: int
+    username: str
+    role: Literal["admin", "user"]
+
+
+class AuthLoginOut(BaseModel):
+    token: str
+    user: AuthUserOut
+
+
+class ProductCardOut(BaseModel):
+    product_id: str
+    name: str
+    category: Optional[str] = None
+    summary: Optional[str] = None
+    average_rating: float = 0.0
+    review_count: int = 0
+    latest_review_at: Optional[str] = None
+
+
+class StarDistributionOut(BaseModel):
+    stars: int
+    count: int
+
+
+class AspectSummaryOut(BaseModel):
+    aspect: str
+    sentiment: str
+
+
+class ProductReviewOut(BaseModel):
+    review_id: int
+    product_id: str
+    reviewer_name: str
+    rating: int
+    review_title: Optional[str] = None
+    review_text: str
+    review_date: str
+    helpful_count: int = 0
+    aspects: List[AspectSummaryOut] = Field(default_factory=list)
+
+
+class ProductDetailOut(BaseModel):
+    product_id: str
+    name: str
+    category: Optional[str] = None
+    summary: Optional[str] = None
+    average_rating: float = 0.0
+    review_count: int = 0
+    star_distribution: List[StarDistributionOut] = Field(default_factory=list)
+
+
+class ProductSuggestionOut(BaseModel):
+    recently_reviewed: List[ProductCardOut] = Field(default_factory=list)
+    similar_products: List[ProductCardOut] = Field(default_factory=list)
+
+
+class SubmitReviewIn(BaseModel):
+    product_id: str = Field(min_length=1, max_length=128)
+    product_name: Optional[str] = Field(default=None, max_length=255)
+    rating: int = Field(ge=1, le=5)
+    review_text: str = Field(min_length=3)
+    review_title: Optional[str] = Field(default=None, max_length=255)
+    pros: Optional[str] = None
+    cons: Optional[str] = None
+    recommendation: Optional[bool] = None
+
+
+class SubmitReviewOut(BaseModel):
+    review_id: int
+    product_id: str
+    linked_review_id: Optional[int] = None

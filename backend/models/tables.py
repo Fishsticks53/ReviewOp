@@ -161,3 +161,62 @@ class AspectEdge(Base):
         Index("ix_aspect_edges_domain", "domain"),
         Index("ix_aspect_edges_src_dst_type", "src_aspect", "dst_aspect", "edge_type"),
     )
+
+
+UserRoleEnum = Enum("admin", "user", name="user_role_enum")
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(80), nullable=False, unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    password_salt: Mapped[str] = mapped_column(String(64), nullable=False)
+    role: Mapped[str] = mapped_column(UserRoleEnum, nullable=False, default="user")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    token: Mapped[str] = mapped_column(String(128), nullable=False, unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user: Mapped["User"] = relationship(lazy="joined")
+
+
+class ProductCatalog(Base):
+    __tablename__ = "products"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    product_id: Mapped[str] = mapped_column(String(128), nullable=False, unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    category: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class UserProductReview(Base):
+    __tablename__ = "user_product_reviews"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    product_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    review_text: Mapped[str] = mapped_column(Text, nullable=False)
+    pros: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cons: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recommendation: Mapped[bool | None] = mapped_column(nullable=True)
+    helpful_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    linked_review_id: Mapped[int | None] = mapped_column(ForeignKey("reviews.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user: Mapped["User"] = relationship(lazy="joined")
+    linked_review: Mapped["Review"] = relationship(lazy="joined")

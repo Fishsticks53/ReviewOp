@@ -42,6 +42,22 @@ This will open new terminal windows for both backend and frontend.
 7. Visit http://127.0.0.1:8000/docs (Swagger UI)
 8. Test the `/infer/review` POST endpoint
 
+### Default Seeded Login Accounts
+
+On backend startup, the app seeds two accounts if they do not already exist:
+
+- Admin
+  - username: `admin`
+  - password: `12345`
+- User
+  - username: `user`
+  - password: `12345`
+
+Login page is available in the frontend at `/login`.
+
+- Admin users are routed to `/admin`
+- Normal users are routed to `/`
+
 ### Frontend
 
 1. cd frontend  
