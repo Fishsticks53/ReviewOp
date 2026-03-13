@@ -16,12 +16,14 @@ import {
   getImpactMatrix,
   getSegments,
   getWeeklySummary,
-} from "../api/client";
+} from "../../api/client";
 import Dashboard from "./Dashboard";
 import AspectAnalytics from "./AspectAnalytics";
 import GraphExplorer from "./GraphExplorer";
 import ReviewExplorer from "./ReviewExplorer";
-import { useAuth } from "../auth/AuthContext";
+import AlertsPage from "./AlertsPage";
+import AlertDetailPage from "./AlertDetailPage";
+import { useAuth } from "../../auth/AuthContext";
 
 const initialGraphFilters = {
   domain: "",
@@ -37,6 +39,8 @@ export default function AdminPortal() {
   const [theme, setTheme] = useState(() => localStorage.getItem("reviewop-theme") || "dark");
   const isDark = theme === "dark";
   const [activePage, setActivePage] = useState("Dashboard");
+  const [selectedAlert, setSelectedAlert] = useState(null);
+
 
   const [reviewText, setReviewText] = useState("");
   const [singleOutput, setSingleOutput] = useState(null);
@@ -171,7 +175,13 @@ export default function AdminPortal() {
   }
 
   const leaderboardRows = useMemo(() => leaderboard.map((row, idx) => ({ id: `${row.aspect}-${idx}`, ...row })), [leaderboard]);
-  const pageNav = ["Dashboard", "AspectAnalytics", "GraphExplorer", "ReviewExplorer"];
+  const pageNav = ["Dashboard", "AspectAnalytics", "GraphExplorer", "ReviewExplorer", "Alerts"];
+
+  const handleAlertClick = (alert) => {
+    setSelectedAlert(alert);
+    setActivePage("AlertDetail");
+  };
+
 
   return (
     <div className={`min-h-screen ${isDark ? "bg-[#060b18] text-slate-100" : "bg-[#f1f5f9] text-slate-800"}`}>
@@ -181,9 +191,10 @@ export default function AdminPortal() {
           <div className="flex flex-wrap items-center gap-2">
             {pageNav.map((name) => (
               <button key={name} type="button" onClick={() => setActivePage(name)} className={`rounded-xl px-3 py-2 text-sm font-semibold ${activePage === name ? "bg-emerald-500 text-slate-950" : isDark ? "bg-slate-800 text-slate-200" : "bg-slate-200 text-slate-700"}`}>
-                {name}
+                {name === "AspectAnalytics" ? "Analytics" : name}
               </button>
             ))}
+
           </div>
           <div className="flex items-center gap-3">
             <label className="inline-flex items-center gap-3 text-sm">
@@ -219,7 +230,7 @@ export default function AdminPortal() {
         {error ? <div className={`rounded-xl p-3 ${isDark ? "bg-red-950 text-red-300" : "bg-red-100 text-red-700"}`}>{error}</div> : null}
 
         <div key={activePage} className="page-fade-in">
-          {activePage === "Dashboard" ? <Dashboard kpis={kpis} alerts={alerts} leaderboardRows={leaderboardRows} impactRows={impactMatrix} segmentRows={segmentRows} weeklySummary={weeklySummary} isDark={isDark} /> : null}
+          {activePage === "Dashboard" ? <Dashboard kpis={kpis} alerts={alerts} leaderboardRows={leaderboardRows} impactRows={impactMatrix} segmentRows={segmentRows} weeklySummary={weeklySummary} isDark={isDark} onSeeMoreAlerts={() => setActivePage("Alerts")} /> : null}
           {activePage === "AspectAnalytics" ? <AspectAnalytics trends={aspectTrends} emerging={emergingAspects} evidence={evidenceRows} aspectDetail={aspectDetail} weeklySummary={weeklySummary} isDark={isDark} /> : null}
           {activePage === "GraphExplorer" ? (
             <GraphExplorer
@@ -255,6 +266,21 @@ export default function AdminPortal() {
               isDark={isDark}
             />
           ) : null}
+          {activePage === "Alerts" ? (
+            <AlertsPage 
+              alerts={alerts} 
+              isDark={isDark} 
+              onAlertClick={handleAlertClick} 
+            />
+          ) : null}
+          {activePage === "AlertDetail" ? (
+            <AlertDetailPage 
+              alert={selectedAlert} 
+              isDark={isDark} 
+              onBack={() => setActivePage("Alerts")} 
+            />
+          ) : null}
+
         </div>
       </main>
     </div>
