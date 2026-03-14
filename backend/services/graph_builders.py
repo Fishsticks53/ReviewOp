@@ -1,0 +1,309 @@
+from __future__ import annotations
+
+from collections import Counter, defaultdict
+from datetime import datetime
+from itertools import combinations
+from typing import Optional
+
+from sqlalchemy.orm import Session, selectinload
+
+from models.tables import Prediction, Review
+
+
+SENTIMENT_SCORE = {"positive": 1.0, "neutral": 0.0, "negative": -1.0}
+
+
+def _parse_dt(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        try:
+            return datetime.strptime(value, "%Y-%m-%d")
+        except ValueError:
+            return None
+
+
+def _canonical_aspect(prediction: Prediction) -> str:
+    return (prediction.aspect_cluster or prediction.aspect_raw or "unknown").strip() or "unknown"
+
+
+def _aspect_label(aspect: str) -> str:
+    return " ".join(part.capitalize() for part in aspect.replace("-", " ").replace("_", " ").split()) or aspect
+
+
+def _normalize_text(value: str) -> str:
+    return " ".join((value or "").lower().replace("_", " ").replace("-", " ").split())
+
+
+def _infer_origin(aspect: str, snippet: str | None) -> str:
+    # Fallback heuristic until origin is stored explicitly in the DB.
+    aspect_terms = set(_normalize_text(aspect).split())
+    snippet_terms = set(_normalize_text(snippet or "").split())
+    if aspect_terms and aspect_terms.issubset(snippet_terms):
+        return "explicit"
+    return "implicit"
+
+
+def _dominant_sentiment(counter: Counter) -> str:
+    if not counter:
+        return "neutral"
+    return sorted(counter.items(), key=lambda item: (-item[1], item[0]))[0][0]
+
+
+def _polarity_hint(source_sentiment: str | None, target_sentiment: str | None) -> str:
+    src = (source_sentiment or "neutral").lower()
+    dst = (target_sentiment or "neutral").lower()
+    if src == dst:
+        return src
+    if "negative" in {src, dst} and "positive" in {src, dst}:
+        return "mixed"
+    if "negative" in {src, dst}:
+        return "negative"
+    if "positive" in {src, dst}:
+        return "positive"
+    return "neutral"
+
+
+def build_single_review_graph(db: Session, review_id: int) -> dict | None:
+    review = (
+        db.query(Review)
+        .options(selectinload(Review.predictions).selectinload(Prediction.evidence_spans))
+        .filter(Review.id == review_id)
+        .first()
+    )
+    if not review:
+        return None
+
+    aspect_nodes: dict[str, dict] = {}
+    ordering: list[tuple[int, str]] = []
+
+    for prediction in review.predictions:
+        aspect_id = _canonical_aspect(prediction)
+        span = min(
+            prediction.evidence_spans,
+            key=lambda item: (item.start_char, item.end_char),
+            default=None,
+        )
+        start_char = span.start_char if span else len(review.text or "")
+        end_char = span.end_char if span else start_char
+        snippet = span.snippet if span else None
+        origin = _infer_origin(aspect_id, snippet)
+
+        current = aspect_nodes.get(aspect_id)
+        if current is None:
+            aspect_nodes[aspect_id] = {
+                "id": aspect_id,
+                "label": _aspect_label(aspect_id),
+                "sentiment": prediction.sentiment,
+                "confidence": float(prediction.confidence or 0.0),
+                "explicit_count": 1 if origin == "explicit" else 0,
+                "implicit_count": 1 if origin == "implicit" else 0,
+                "evidence": snippet,
+                "evidence_start": start_char if span else None,
+                "evidence_end": end_char if span else None,
+                "origin": origin,
+                "_confidence_total": float(prediction.confidence or 0.0),
+                "_mentions": 1,
+                "_sentiments": Counter([prediction.sentiment]),
+            }
+        else:
+            current["_confidence_total"] += float(prediction.confidence or 0.0)
+            current["_mentions"] += 1
+            current["_sentiments"][prediction.sentiment] += 1
+            current["explicit_count"] += 1 if origin == "explicit" else 0
+            current["implicit_count"] += 1 if origin == "implicit" else 0
+            if start_char < (current.get("evidence_start") if current.get("evidence_start") is not None else 10**9):
+                current["evidence"] = snippet
+                current["evidence_start"] = start_char
+                current["evidence_end"] = end_char
+
+        ordering.append((start_char, aspect_id))
+
+    nodes = []
+    for aspect_id, node in aspect_nodes.items():
+        dominant = _dominant_sentiment(node["_sentiments"])
+        explicit_count = int(node["explicit_count"])
+        implicit_count = int(node["implicit_count"])
+        origin = "explicit" if explicit_count and not implicit_count else "implicit" if implicit_count and not explicit_count else "mixed"
+        nodes.append(
+            {
+                "id": aspect_id,
+                "label": node["label"],
+                "sentiment": dominant,
+                "confidence": round(node["_confidence_total"] / max(node["_mentions"], 1), 4),
+                "explicit_count": explicit_count,
+                "implicit_count": implicit_count,
+                "evidence": node.get("evidence"),
+                "evidence_start": node.get("evidence_start"),
+                "evidence_end": node.get("evidence_end"),
+                "origin": origin,
+            }
+        )
+
+    ordered_mentions = [aspect_id for _, aspect_id in sorted(ordering, key=lambda item: (item[0], item[1]))]
+    first_position: dict[str, int] = {}
+    for index, aspect_id in enumerate(ordered_mentions):
+        first_position.setdefault(aspect_id, index)
+
+    sentiment_lookup = {node["id"]: node["sentiment"] for node in nodes}
+    transition_weights: defaultdict[tuple[str, str], int] = defaultdict(int)
+    for source, target in zip(ordered_mentions, ordered_mentions[1:]):
+        if source == target:
+            continue
+        transition_weights[(source, target)] += 1
+
+    edges = []
+    for (source, target), weight in sorted(
+        transition_weights.items(),
+        key=lambda item: (
+            first_position.get(item[0][0], 10**9),
+            first_position.get(item[0][1], 10**9),
+            item[0][0],
+            item[0][1],
+        ),
+    ):
+        edges.append(
+            {
+                "source": source,
+                "target": target,
+                "type": "review_transition",
+                "weight": float(weight),
+                "pair_count": int(weight),
+                "directional": True,
+                "polarity_hint": _polarity_hint(sentiment_lookup.get(source), sentiment_lookup.get(target)),
+            }
+        )
+
+    return {
+        "scope": "single_review",
+        "review_id": review.id,
+        "generated_at": datetime.utcnow().isoformat(),
+        "filters": {"time_bucket_ready": True},
+        "nodes": nodes,
+        "edges": edges,
+    }
+
+
+def build_batch_aspect_graph(
+    db: Session,
+    domain: str | None = None,
+    product_id: str | None = None,
+    dt_from: str | None = None,
+    dt_to: str | None = None,
+    min_edge_weight: int = 1,
+) -> dict:
+    f = _parse_dt(dt_from)
+    t = _parse_dt(dt_to)
+
+    reviews_query = (
+        db.query(Review)
+        .options(selectinload(Review.predictions).selectinload(Prediction.evidence_spans))
+        .filter(Review.predictions.any())
+    )
+
+    if domain:
+        reviews_query = reviews_query.filter(Review.domain == domain)
+    if product_id:
+        reviews_query = reviews_query.filter(Review.product_id == product_id)
+    if f:
+        reviews_query = reviews_query.filter(Review.created_at >= f)
+    if t:
+        reviews_query = reviews_query.filter(Review.created_at <= t)
+
+    reviews = reviews_query.all()
+
+    node_stats: dict[str, dict] = {}
+    edge_weights: defaultdict[tuple[str, str], int] = defaultdict(int)
+    edge_examples: defaultdict[tuple[str, str], list[str]] = defaultdict(list)
+
+    for review in reviews:
+        review_aspects = set()
+        for prediction in review.predictions:
+            aspect_id = _canonical_aspect(prediction)
+            span = min(
+                prediction.evidence_spans,
+                key=lambda item: (item.start_char, item.end_char),
+                default=None,
+            )
+            snippet = span.snippet if span else None
+            origin = _infer_origin(aspect_id, snippet)
+
+            stats = node_stats.setdefault(
+                aspect_id,
+                {
+                    "id": aspect_id,
+                    "label": _aspect_label(aspect_id),
+                    "frequency": 0,
+                    "explicit_count": 0,
+                    "implicit_count": 0,
+                    "_scores": [],
+                    "_sentiments": Counter(),
+                },
+            )
+            stats["_scores"].append(SENTIMENT_SCORE.get(prediction.sentiment, 0.0))
+            stats["_sentiments"][prediction.sentiment] += 1
+            stats["explicit_count"] += 1 if origin == "explicit" else 0
+            stats["implicit_count"] += 1 if origin == "implicit" else 0
+            review_aspects.add(aspect_id)
+
+        for aspect_id in review_aspects:
+            node_stats[aspect_id]["frequency"] += 1
+
+        for source, target in combinations(sorted(review_aspects), 2):
+            edge_weights[(source, target)] += 1
+            if len(edge_examples[(source, target)]) < 3 and review.text:
+                edge_examples[(source, target)].append(review.text[:220])
+
+    nodes = []
+    for aspect_id, stats in sorted(node_stats.items(), key=lambda item: (-item[1]["frequency"], item[0])):
+        scores = stats["_scores"]
+        dominant = _dominant_sentiment(stats["_sentiments"])
+        negative_count = int(stats["_sentiments"].get("negative", 0))
+        mention_count = sum(stats["_sentiments"].values())
+        nodes.append(
+            {
+                "id": aspect_id,
+                "label": stats["label"],
+                "frequency": int(stats["frequency"]),
+                "avg_sentiment": round(sum(scores) / len(scores), 4) if scores else 0.0,
+                "dominant_sentiment": dominant,
+                "negative_ratio": round(negative_count / mention_count, 4) if mention_count else 0.0,
+                "explicit_count": int(stats["explicit_count"]),
+                "implicit_count": int(stats["implicit_count"]),
+            }
+        )
+
+    dominant_lookup = {node["id"]: node["dominant_sentiment"] for node in nodes}
+    edges = []
+    for (source, target), weight in sorted(edge_weights.items(), key=lambda item: (-item[1], item[0][0], item[0][1])):
+        if weight < max(int(min_edge_weight or 1), 1):
+            continue
+        edges.append(
+            {
+                "source": source,
+                "target": target,
+                "type": "cooccurrence",
+                "weight": float(weight),
+                "directional": False,
+                "pair_count": int(weight),
+                "polarity_hint": _polarity_hint(dominant_lookup.get(source), dominant_lookup.get(target)),
+                "example_reviews": edge_examples.get((source, target), []),
+            }
+        )
+
+    return {
+        "scope": "batch",
+        "generated_at": datetime.utcnow().isoformat(),
+        "filters": {
+            "domain": domain,
+            "product_id": product_id,
+            "from": dt_from,
+            "to": dt_to,
+            "min_edge_weight": max(int(min_edge_weight or 1), 1),
+            "time_bucket_ready": True,
+        },
+        "nodes": nodes,
+        "edges": edges,
+    }

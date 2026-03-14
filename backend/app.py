@@ -10,8 +10,7 @@ from core.config import settings
 from models.tables import Review, Prediction, EvidenceSpan
 from models.schemas import InferReviewIn, InferReviewOut, PredictionOut, EvidenceSpanOut
 from services.seq2seq_infer import Seq2SeqEngine
-from services.evidence import find_evidence_for_aspect
-from services.open_aspect import extract_open_aspects
+from services.review_pipeline import refresh_corpus_graph, run_single_review_pipeline
 
 from routes.analytics import router as analytics_router
 from routes.graph import router as graph_router
@@ -21,16 +20,6 @@ from routes.user_portal import router as user_portal_router, seed_default_accoun
 
 
 app = FastAPI(title="Proto ReviewOps MVP (Phase 1-2)", version="0.3.0")
-
-
-def _safe_extract_aspects(text: str, max_aspects: int = 8) -> list[str]:
-    try:
-        aspects = extract_open_aspects(text, max_aspects=max_aspects)
-        if aspects:
-            return aspects
-    except Exception:
-        pass
-    return ["general"]
 
 
 @app.on_event("startup")
@@ -98,54 +87,38 @@ def infer_review(payload: InferReviewIn, db: Session = Depends(get_db)):
     if not text_in:
         raise HTTPException(status_code=400, detail="text is required")
 
-    r = Review(text=text_in, domain=payload.domain, product_id=payload.product_id)
-    db.add(r)
-    db.flush()
-
     engine_ = app.state.seq2seq_engine
+    r = run_single_review_pipeline(
+        db,
+        engine=engine_,
+        text=text_in,
+        domain=payload.domain,
+        product_id=payload.product_id,
+    )
+    db.commit()
 
-    aspects = _safe_extract_aspects(text_in, max_aspects=8)
+    try:
+        refresh_corpus_graph(db, domain=r.domain)
+    except Exception:
+        pass
 
+    db.refresh(r)
     preds_out: list[PredictionOut] = []
-
-    for aspect_raw in aspects:
-        # Evidence first: classify sentiment on the evidence snippet (sentence), not full review.
-        s, e, snippet = find_evidence_for_aspect(text_in, aspect_raw)
-
-        # Use calibrated confidence (no constant 0.75) via likelihood scoring.
-        sent, conf = engine_.classify_sentiment_with_confidence(snippet, aspect_raw)
-
-        pred = Prediction(
-            review_id=r.id,
-            aspect_raw=aspect_raw,
-            aspect_cluster=aspect_raw,  # Phase 3: clustering label
-            sentiment=sent,
-            confidence=float(conf),
-            rationale=None,
-        )
-        db.add(pred)
-        db.flush()
-
-        ev = EvidenceSpan(
-            prediction_id=pred.id,
-            start_char=s,
-            end_char=e,
-            snippet=snippet,
-        )
-        db.add(ev)
-
+    for pred in r.predictions:
+        spans = [
+            EvidenceSpanOut(start_char=ev.start_char, end_char=ev.end_char, snippet=ev.snippet)
+            for ev in pred.evidence_spans
+        ]
         preds_out.append(
             PredictionOut(
-                aspect_raw=aspect_raw,
-                aspect_cluster=aspect_raw,
-                sentiment=sent,
-                confidence=float(conf),
-                evidence_spans=[EvidenceSpanOut(start_char=s, end_char=e, snippet=snippet)],
-                rationale=None,
+                aspect_raw=pred.aspect_raw,
+                aspect_cluster=pred.aspect_cluster,
+                sentiment=pred.sentiment,
+                confidence=float(pred.confidence),
+                evidence_spans=spans,
+                rationale=pred.rationale,
             )
         )
-
-    db.commit()
 
     return InferReviewOut(
     review_id=r.id,

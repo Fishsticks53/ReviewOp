@@ -23,8 +23,9 @@ export default function UserHomePage() {
 
   function onSearch(e) {
     e.preventDefault();
-    if (!query.trim()) return;
-    nav(`/search?q=${encodeURIComponent(query.trim())}`);
+    const q = query.trim();
+    if (!q) return;
+    nav(`/search?q=${encodeURIComponent(q)}&min_rating=0&sort=most_recent`);
   }
 
   return (

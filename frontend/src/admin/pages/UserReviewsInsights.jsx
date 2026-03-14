@@ -55,7 +55,13 @@ export default function UserReviewsInsights({ summary, list, isDark = false }) {
             { field: "product_id", headerName: "Product ID", flex: 0.7, minWidth: 120 },
             { field: "product_name", headerName: "Product Name", flex: 1, minWidth: 140 },
             { field: "rating", headerName: "Rating", type: "number", flex: 0.4, minWidth: 80 },
-            { field: "recommendation", headerName: "Recommends", flex: 0.5, minWidth: 100 },
+            {
+              field: "recommendation",
+              headerName: "Recommends",
+              flex: 0.5,
+              minWidth: 100,
+              valueFormatter: (v) => (v === true ? "Yes" : v === false ? "No" : "-"),
+            },
             { field: "review_title", headerName: "Title", flex: 0.8, minWidth: 120 },
             { field: "review_text", headerName: "Review", flex: 1.8, minWidth: 250 },
           ]}

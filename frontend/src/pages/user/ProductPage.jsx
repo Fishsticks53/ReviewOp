@@ -79,7 +79,11 @@ export default function ProductPage() {
             })}
           </div>
           <div className="mt-4">
-            <Link to={`/products/${encodeURIComponent(detail.product_id)}/review`} className="rounded-lg bg-emerald-600 px-4 py-2 text-white">
+            <Link
+              to={`/products/${encodeURIComponent(detail.product_id)}/review?product_name=${encodeURIComponent(detail.name || "")}`}
+              state={{ productName: detail.name || "" }}
+              className="rounded-lg bg-emerald-600 px-4 py-2 text-white"
+            >
               Write Review
             </Link>
           </div>

@@ -17,7 +17,19 @@ async function request(path, options = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(payload?.detail || payload?.error || payload || `Request failed: ${response.status}`);
+    const detail = payload?.detail;
+    let message = payload?.error || payload;
+    if (Array.isArray(detail)) {
+      message = detail.map((d) => d?.msg || JSON.stringify(d)).join("; ");
+    } else if (typeof detail === "string") {
+      message = detail;
+    } else if (detail && typeof detail === "object") {
+      message = detail.msg || JSON.stringify(detail);
+    }
+    if (typeof message !== "string") {
+      message = `Request failed: ${response.status}`;
+    }
+    throw new Error(message);
   }
 
   return payload;
@@ -294,6 +306,11 @@ export async function getMyReviews(token) {
   return request("/user/reviews/me", {
     headers: { ...authHeaders(token) },
   });
+}
+
+export async function getMyReviewById(token, reviewId) {
+  const rows = await getMyReviews(token);
+  return (rows || []).find((row) => Number(row.review_id) === Number(reviewId)) || null;
 }
 
 export async function updateMyReview(token, reviewId, payload) {

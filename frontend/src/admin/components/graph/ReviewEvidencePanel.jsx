@@ -1,7 +1,16 @@
 const sentimentClasses = {
-  positive: "bg-green-500/30 text-green-100 ring-1 ring-green-400/40",
-  neutral: "bg-slate-500/30 text-slate-100 ring-1 ring-slate-400/30",
-  negative: "bg-red-500/30 text-red-100 ring-1 ring-red-400/40",
+  positive: {
+    dark: "bg-green-500/30 text-green-100 ring-1 ring-green-400/40",
+    light: "bg-green-200 text-black ring-1 ring-green-300",
+  },
+  neutral: {
+    dark: "bg-slate-500/30 text-slate-100 ring-1 ring-slate-400/30",
+    light: "bg-slate-200 text-black ring-1 ring-slate-300",
+  },
+  negative: {
+    dark: "bg-red-500/30 text-red-100 ring-1 ring-red-400/40",
+    light: "bg-red-200 text-black ring-1 ring-red-300",
+  },
 };
 
 function buildSegments(text, nodes) {
@@ -46,6 +55,7 @@ function buildSegments(text, nodes) {
 
 export default function ReviewEvidencePanel({ text = "", nodes = [], isDark = false }) {
   const segments = buildSegments(text, nodes);
+  const tone = isDark ? "dark" : "light";
 
   return (
     <div className={`rounded-2xl border p-4 ${isDark ? "border-slate-800 bg-[#08101f]" : "border-slate-200 bg-slate-50"}`}>
@@ -55,7 +65,7 @@ export default function ReviewEvidencePanel({ text = "", nodes = [], isDark = fa
           segment.highlighted ? (
             <mark
               key={`${segment.label}-${index}`}
-              className={`mx-[1px] rounded px-1.5 py-0.5 ${sentimentClasses[segment.sentiment] || sentimentClasses.neutral}`}
+              className={`mx-[1px] rounded px-1.5 py-0.5 ${(sentimentClasses[segment.sentiment] || sentimentClasses.neutral)[tone]}`}
               title={segment.label}
             >
               {segment.text}

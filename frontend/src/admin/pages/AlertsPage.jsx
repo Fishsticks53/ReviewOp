@@ -7,10 +7,12 @@ export default function AlertsPage({ alerts = [], isDark, onAlertClick, onAlertC
 
   const filteredAlerts = useMemo(() => {
     return alerts.filter((a) => {
+      const message = String(a?.message || "").toLowerCase();
+      const aspect = String(a?.aspect || "").toLowerCase();
       const matchesSearch = 
-        a.message.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        a.aspect.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesSeverity = severityFilter === "All" || a.severity === severityFilter;
+        message.includes(searchTerm.toLowerCase()) || 
+        aspect.includes(searchTerm.toLowerCase());
+      const matchesSeverity = severityFilter === "All" || String(a?.severity || "").toLowerCase() === severityFilter.toLowerCase();
       return matchesSearch && matchesSeverity;
     });
   }, [alerts, searchTerm, severityFilter]);

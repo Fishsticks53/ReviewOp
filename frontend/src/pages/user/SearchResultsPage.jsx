@@ -21,7 +21,7 @@ export default function SearchResultsPage() {
   const [hasMore, setHasMore] = useState(true);
 
   const q = params.get("q") || "";
-  const minRating = Number(params.get("min_rating") || "1");
+  const minRating = Number(params.get("min_rating") ?? "0");
   const sort = params.get("sort") || "most_recent";
   const limit = 10;
 
@@ -30,6 +30,7 @@ export default function SearchResultsPage() {
 
   useEffect(() => {
     // Reset when keywords or filters change
+    setError("");
     setLoading(true);
     searchProducts(token, { q, min_rating: minRating, sort, offset: 0 })
       .then((data) => {
@@ -39,6 +40,10 @@ export default function SearchResultsPage() {
       .catch((ex) => setError(ex.message || "Search failed"))
       .finally(() => setLoading(false));
   }, [token, q, minRating, sort]);
+
+  useEffect(() => {
+    setSearchInput(q);
+  }, [q]);
 
   // Debounce the search input update to the URL params
   useEffect(() => {

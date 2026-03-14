@@ -5,7 +5,7 @@
 requirements.in
 backend/__pycache__/
 backend/core/__pycache__/
-backend/
 node_modules/
 frontend/node_modules/
 *.pyc
+backend/models/implicit/

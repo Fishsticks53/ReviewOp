@@ -12,6 +12,7 @@ from services.parse_output import parse_lines
 from services.evidence import find_evidence_for_aspect
 from services.seq2seq_infer import Seq2SeqEngine
 from services.open_aspect import extract_open_aspects
+from services.review_pipeline import refresh_corpus_graph
 
 
 def _safe_extract_aspects(text: str, max_aspects: int = 8) -> list[str]:
@@ -114,5 +115,9 @@ def process_csv_sync(
 
     job.status = "done"
     job.updated_at = datetime.utcnow()
+    try:
+        refresh_corpus_graph(db, domain=domain)
+    except Exception as ex:
+        job.error = f"{job.error + ' | ' if job.error else ''}corpus graph refresh failed: {str(ex)[:400]}"
     db.add(job)
     db.commit()

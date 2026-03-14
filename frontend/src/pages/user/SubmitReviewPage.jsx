@@ -1,27 +1,66 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { submitReview } from "../../api/client";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { getMyReviewById, getProductDetail, submitReview, updateMyReview } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import UserShell from "../../components/user/UserShell";
 
 export default function SubmitReviewPage() {
   const { productId } = useParams();
+  const [params] = useSearchParams();
+  const location = useLocation();
   const { token } = useAuth();
   const nav = useNavigate();
-  const [productRef, setProductRef] = useState(productId || "");
-  const [productName, setProductName] = useState("");
-  const [rating, setRating] = useState(5);
-  const [reviewText, setReviewText] = useState("");
-  const [reviewTitle, setReviewTitle] = useState("");
-  const [pros, setPros] = useState("");
-  const [cons, setCons] = useState("");
-  const [recommendation, setRecommendation] = useState(false);
+
+  const editReviewId = params.get("edit_review_id");
+  const prefill = location.state?.prefill || null;
+  const initialProductId = productId || params.get("product_id") || prefill?.product_id || "";
+  const initialProductName = params.get("product_name") || location.state?.productName || "";
+
+  const [productRef, setProductRef] = useState(initialProductId);
+  const [productName, setProductName] = useState(initialProductName);
+  const [rating, setRating] = useState(prefill?.rating ?? 5);
+  const [reviewText, setReviewText] = useState(prefill?.review_text ?? "");
+  const [reviewTitle, setReviewTitle] = useState(prefill?.review_title ?? "");
+  const [pros, setPros] = useState(prefill?.pros ?? "");
+  const [cons, setCons] = useState(prefill?.cons ?? "");
+  const [recommendation, setRecommendation] = useState(prefill?.recommendation ?? false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const isEditMode = useMemo(() => Boolean(editReviewId), [editReviewId]);
 
   useEffect(() => {
     if (productId) setProductRef(productId);
   }, [productId]);
+
+  useEffect(() => {
+    if (!editReviewId || prefill) return;
+    getMyReviewById(token, Number(editReviewId))
+      .then((row) => {
+        if (!row) {
+          setError("Review not found.");
+          return;
+        }
+        setProductRef(row.product_id || "");
+        setRating(row.rating ?? 5);
+        setReviewTitle(row.review_title || "");
+        setReviewText(row.review_text || "");
+        setRecommendation(Boolean(row.recommendation));
+      })
+      .catch((ex) => setError(ex.message || "Failed to load review for editing"));
+  }, [token, editReviewId, prefill]);
+
+  useEffect(() => {
+    const cleanProductId = (productRef || "").trim();
+    if (!cleanProductId || (productName || "").trim()) return;
+    getProductDetail(token, cleanProductId)
+      .then((detail) => {
+        if (detail?.name) setProductName(detail.name);
+      })
+      .catch(() => {
+        // Best effort prefill.
+      });
+  }, [token, productRef, productName]);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -35,28 +74,36 @@ export default function SubmitReviewPage() {
       setError("Review text is required.");
       return;
     }
+
+    const payload = {
+      product_id: cleanProductId,
+      product_name: productName.trim() || null,
+      rating,
+      review_text: reviewText,
+      review_title: reviewTitle || null,
+      pros: pros || null,
+      cons: cons || null,
+      recommendation,
+    };
+
     setLoading(true);
     try {
-      await submitReview(token, {
-        product_id: cleanProductId,
-        product_name: productName.trim() || null,
-        rating,
-        review_text: reviewText,
-        review_title: reviewTitle || null,
-        pros: pros || null,
-        cons: cons || null,
-        recommendation,
-      });
-      nav(`/products/${encodeURIComponent(cleanProductId)}`);
+      if (isEditMode) {
+        await updateMyReview(token, Number(editReviewId), payload);
+        nav("/my-reviews");
+      } else {
+        await submitReview(token, payload);
+        nav(`/products/${encodeURIComponent(cleanProductId)}`);
+      }
     } catch (ex) {
-      setError(ex.message || "Submit failed");
+      setError(ex.message || (isEditMode ? "Update failed" : "Submit failed"));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <UserShell title="Write Review">
+    <UserShell title={isEditMode ? "Edit Review" : "Write Review"}>
       <form onSubmit={onSubmit} className="mx-auto w-full max-w-3xl space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
         {error ? <div className="rounded-lg bg-red-100 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-200">{error}</div> : null}
         <div className="grid gap-3 md:grid-cols-2">
@@ -79,7 +126,7 @@ export default function SubmitReviewPage() {
           I recommend this product
         </label>
         <button disabled={loading} className="rounded-lg bg-emerald-600 px-4 py-2 text-white disabled:opacity-60">
-          {loading ? "Submitting..." : "Submit Review"}
+          {loading ? (isEditMode ? "Updating..." : "Submitting...") : isEditMode ? "Update Review" : "Submit Review"}
         </button>
       </form>
     </UserShell>
