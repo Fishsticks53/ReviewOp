@@ -73,12 +73,9 @@ ProtoBackend can train from either of these:
 
 1. Default backend JSONL (preferred)
 - Files expected:
-  - `backend/data/implicit/raw/implicit_reviewlevel_train.jsonl`
-  - `backend/data/implicit/raw/implicit_reviewlevel_val.jsonl`
-  - `backend/data/implicit/raw/implicit_reviewlevel_test.jsonl`
-- Expected JSONL label shape per row:
-  - `implicit_labels[*].implicit_aspect`
-  - `implicit_labels[*].evidence_sentence`
+  - `backend/data/implicit/raw/train.jsonl`
+  - `backend/data/implicit/raww/val.jsonl`
+  - `backend/data/implicit/raw/test.jsonl`
 
 2. CSV input
 - Path example: `ProtoBackend/data/sample_implicit_aspects.csv`
