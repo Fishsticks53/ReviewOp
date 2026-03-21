@@ -14,6 +14,16 @@ from splitter import assign_splits, leakage_ids, split_rows
 from utils import normalize_text, stable_hash, write_json, write_jsonl
 from validators import aspect_frequency, few_shot_warnings, validate_jsonl, validate_review_rows
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _resolve_project_path(raw: Path) -> Path:
+    if raw.is_absolute():
+        return raw
+    if len(raw.parts) >= 2 and raw.parts[0] == "dataset_builder":
+        return PROJECT_ROOT / Path(*raw.parts[1:])
+    return PROJECT_ROOT / raw
+
 
 def list_input_files(input_dir: Path) -> List[Path]:
     supported = {".csv", ".tsv", ".json", ".jsonl", ".xlsx", ".xls"}
@@ -73,8 +83,8 @@ def compact_open_aspects(review_rows: List[Dict[str, Any]], min_count: int = 5) 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="ReviewOps dataset builder")
-    parser.add_argument("--input-dir", type=Path, default=Path("dataset_builder/input"))
-    parser.add_argument("--output-dir", type=Path, default=Path("dataset_builder/output"))
+    parser.add_argument("--input-dir", type=Path, default=PROJECT_ROOT / "input")
+    parser.add_argument("--output-dir", type=Path, default=PROJECT_ROOT / "output")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--split-ratios", type=str, default="0.8,0.1,0.1")
     parser.add_argument("--max-aspects", type=int, default=5)
@@ -88,8 +98,8 @@ def main() -> None:
         raise ValueError("--split-ratios must have 3 values that sum to 1.0")
 
     cfg = BuilderConfig(
-        input_dir=args.input_dir,
-        output_dir=args.output_dir,
+        input_dir=_resolve_project_path(args.input_dir),
+        output_dir=_resolve_project_path(args.output_dir),
         split_ratios={"train": ratios[0], "val": ratios[1], "test": ratios[2]},
         random_seed=args.seed,
         max_aspects_per_review=args.max_aspects,
