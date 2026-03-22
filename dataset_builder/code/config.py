@@ -67,6 +67,15 @@ class BuilderConfig:
     max_evidence_fallback_rate: float = 0.15
     episode_task_mix: str = "aspect_classification:0.4,implicit_aspect_inference:0.3,aspect_sentiment_classification:0.3"
     hard_negative_strategy: str = "hybrid"
+    workflow: str = "single"
+    decision_policy: str = "deterministic"
+    decision_temperature: float = 0.0
+    min_confidence_for_hard_map: float = 0.75
+    confidence_uncertainty_threshold: float = 0.75
+    confidence_calibration_blend: float = 0.55
+    memory_mode: str = "off"
+    freeze_memory_during_eval: bool = True
+    memory_dir: Path = Path("output/reports/aspect_memory")
     domains_include: List[str] = field(default_factory=list)
     llm: LLMSettings = field(default_factory=LLMSettings)
 

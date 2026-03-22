@@ -17,16 +17,18 @@ DOMAIN_KEYWORDS = {
 
 
 def infer_domain(source_name: str, metadata_domain: str, text: str) -> str:
-    if metadata_domain:
-        return metadata_domain.strip().lower()
     source_l = source_name.lower()
-    for d in DOMAIN_KEYWORDS:
-        if d in source_l:
-            return d
+    metadata_l = metadata_domain.strip().lower() if metadata_domain else ""
     text_l = text.lower()
     score = Counter()
     for d, kws in DOMAIN_KEYWORDS.items():
         score[d] += sum(1 for k in kws if re.search(rf"\b{re.escape(k)}\b", text_l))
+        if d in source_l:
+            score[d] += 2
+        if metadata_l == d:
+            score[d] += 1
+        elif metadata_l and metadata_l in kws:
+            score[d] += 1
     best, cnt = (score.most_common(1)[0] if score else ("general", 0))
     return best if cnt > 0 else "general"
 

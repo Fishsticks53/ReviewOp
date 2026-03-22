@@ -81,6 +81,11 @@ def compact_open_aspects(review_rows: List[Dict[str, Any]], min_count: int = 5) 
     return review_rows
 
 
+def _text_signature(text: str) -> str:
+    tokens = [t for t in normalize_text(text).lower().split() if len(t) > 2]
+    return " ".join(tokens[:24])
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="ReviewOps dataset builder")
     parser.add_argument("--input-dir", type=Path, default=PROJECT_ROOT / "input")
@@ -114,6 +119,7 @@ def main() -> None:
         return
 
     review_by_id: Dict[str, Dict[str, Any]] = {}
+    seen_text_signatures: List[str] = []
     skipped: List[Dict[str, Any]] = []
     schema_reports: List[Dict[str, Any]] = []
     rows_read = 0
@@ -152,6 +158,11 @@ def main() -> None:
             if not review_text:
                 skipped.append({"file": str(file_path), "row": idx, "reason": "empty_review_text"})
                 continue
+            sig = _text_signature(review_text)
+            if any(sig == prev or len(set(sig.split()) & set(prev.split())) / max(1, len(set(sig.split()) | set(prev.split()))) >= 0.88 for prev in seen_text_signatures):
+                skipped.append({"file": str(file_path), "row": idx, "reason": "near_duplicate_review_text"})
+                continue
+            seen_text_signatures.append(sig)
 
             source = file_path.name
             raw_id = normalize_text(row.get(schema.id_col, "")) if schema.id_col else ""
@@ -188,6 +199,12 @@ def main() -> None:
 
             if not labels:
                 skipped.append({"file": str(file_path), "row": idx, "reason": "no_labels_after_inference"})
+                continue
+
+            if any(lab.get("type") == "implicit" and str(lab.get("aspect", "")).replace("_", " ") in normalize_text(review_text).lower() for lab in labels):
+                labels = [lab for lab in labels if not (lab.get("type") == "implicit" and str(lab.get("aspect", "")).replace("_", " ") in normalize_text(review_text).lower())]
+            if not labels:
+                skipped.append({"file": str(file_path), "row": idx, "reason": "implicit_explicit_collision"})
                 continue
 
             if len(labels) > cfg.max_aspects_per_review:

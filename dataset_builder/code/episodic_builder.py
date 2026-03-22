@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+import re
 from collections import Counter, defaultdict
 from typing import Dict, Iterable, List, Tuple
 
@@ -138,6 +139,20 @@ def _records_by_domain(rows: Iterable[Dict]) -> Dict[str, List[Dict]]:
     return dict(out)
 
 
+def _text_signature(text: str) -> str:
+    low = re.sub(r"[^a-z0-9\s]", " ", str(text or "").lower())
+    tokens = [t for t in low.split() if len(t) > 2]
+    return " ".join(tokens[:32])
+
+
+def _jaccard(a: str, b: str) -> float:
+    sa = set(a.split())
+    sb = set(b.split())
+    if not sa or not sb:
+        return 0.0
+    return len(sa & sb) / max(1, len(sa | sb))
+
+
 def _select_label_set(
     eligible: List[str],
     label_buckets: Dict[str, List[Dict]],
@@ -206,6 +221,55 @@ def _pick_examples(
         if len(picked) >= k_needed:
             break
     return picked
+
+
+def _pick_non_leaky_examples(
+    bucket: List[Dict],
+    k_needed: int,
+    rng: random.Random,
+    *,
+    exclude_ids: set[str] | None = None,
+    exclude_texts: List[str] | None = None,
+    aspect_type: str | None = None,
+    sentiment_preference: Tuple[str, ...] | None = None,
+    domain_preference: set[str] | None = None,
+    max_similarity: float = 0.82,
+) -> List[Dict]:
+    pool = _pick_examples(
+        bucket,
+        len(bucket),
+        rng,
+        exclude_ids=exclude_ids,
+        aspect_type=aspect_type,
+        sentiment_preference=sentiment_preference,
+        domain_preference=domain_preference,
+    )
+    exclude_texts = [_text_signature(x) for x in (exclude_texts or [])]
+    picked: List[Dict] = []
+    for ex in pool:
+        sig = _text_signature(ex.get("text", ""))
+        if any(_jaccard(sig, t) >= max_similarity for t in exclude_texts):
+            continue
+        if any(_jaccard(sig, _text_signature(p.get("text", ""))) >= max_similarity for p in picked):
+            continue
+        picked.append(ex)
+        if len(picked) >= k_needed:
+            break
+    return picked
+
+
+def _domain_coherent_labels(label_pool: List[str], by_label: Dict[str, List[Dict]], n_way: int, rng: random.Random, allow_mixed: bool) -> List[str]:
+    if allow_mixed:
+        return _select_label_set(label_pool, by_label, n_way, rng, task="aspect_classification")
+    domain_counts = Counter()
+    for lbl in label_pool:
+        for d in {str(x.get("domain", "general")).lower() for x in by_label[lbl]}:
+            domain_counts[d] += 1
+    if not domain_counts:
+        return _select_label_set(label_pool, by_label, n_way, rng, task="aspect_classification")
+    target_domain = domain_counts.most_common(1)[0][0]
+    coherent = [lbl for lbl in label_pool if any(str(x.get("domain", "general")).lower() == target_domain for x in by_label[lbl])]
+    return _select_label_set(coherent or label_pool, by_label, n_way, rng, task="aspect_classification")
 
 
 def _validate_episode(ep: Dict, enforce_labels_field: bool, balance_tolerance: float, k_shot: int, q_query: int) -> bool:
@@ -302,11 +366,12 @@ def _build_episode(
         if task == "aspect_sentiment_classification":
             query_aspect_type = None
 
-        support = _pick_examples(bucket, k_shot, rng, exclude_ids=used_support_ids, aspect_type=support_aspect_type)
+        support = _pick_non_leaky_examples(bucket, k_shot, rng, exclude_ids=used_support_ids, aspect_type=support_aspect_type)
         if len(support) < k_shot:
             return None
         support_ids = {x["record_id"] for x in support}
         used_support_ids.update(support_ids)
+        support_texts = [x.get("text", "") for x in support]
 
         query_candidates = [x for x in bucket if x["record_id"] not in used_support_ids and x["record_id"] not in used_query_ids]
         if task == "implicit_aspect_inference" and implicit_query_only:
@@ -325,11 +390,12 @@ def _build_episode(
             domain_candidates = [x for x in query_candidates if str(x.get("domain", "general")).lower() not in train_domains]
             if domain_candidates:
                 query_candidates = domain_candidates
-        query = _pick_examples(
+        query = _pick_non_leaky_examples(
             query_candidates,
             q_query,
             rng,
             exclude_ids=used_query_ids,
+            exclude_texts=support_texts,
             aspect_type=query_aspect_type,
             sentiment_preference=sentiment_pref,
         )
@@ -401,13 +467,16 @@ def build_episodes(
 
         label_pool = sorted(eligible, key=lambda lbl: (-len(by_label[lbl]), lbl))
         # Runtime optimization: fewer episodes still keep split/task diversity.
-        desired_total = min(36, max(9, len(label_pool)))
+        desired_total = min(180, max(36, len(label_pool) * 6))
         task_counts = _task_counts(desired_total, task_mix)
+        allow_mixed = bool(cross_domain)
 
         for task in TASKS:
             for i in range(task_counts[task]):
-                labels = _select_label_set(label_pool, by_label, n_way, rng, task)
+                labels = _domain_coherent_labels(label_pool, by_label, n_way, rng, allow_mixed=allow_mixed)
                 if len(labels) != n_way:
+                    continue
+                if n_way < 2:
                     continue
                 if task == "implicit_aspect_inference":
                     labels = [lbl for lbl in labels if any(x.get("aspect_type") == "implicit" for x in by_label[lbl])] or labels

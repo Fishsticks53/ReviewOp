@@ -18,13 +18,31 @@ def extract_evidence(text: str, evidence_sentence: str, aspect_raw: str, min_cha
     raw = str(aspect_raw or "").strip().lower().replace("_", " ")
     phrase = ""
     if raw:
-        m = re.search(rf"([^.?!]{{0,28}}\b{re.escape(raw)}\b[^.?!]{{0,28}})", low_sent)
-        if m:
-            phrase = sentence[m.start(1):m.end(1)].strip(" ,;:-")
+        parts = [p.strip() for p in raw.split() if p.strip()]
+        if parts:
+            pattern = r"([^.?!]{0,18}\b" + r"\b[^.?!]{0,18}\b".join(re.escape(p) for p in parts[:3]) + r"[^.?!]{0,18})"
+            m = re.search(pattern, low_sent)
+            if m:
+                phrase = sentence[m.start(1):m.end(1)].strip(" ,;:-")
+        if not phrase:
+            for token in parts[:3]:
+                if len(token) >= 4:
+                    idx = low_sent.find(token)
+                    if idx >= 0:
+                        start = max(0, idx - 18)
+                        end = min(len(sentence), idx + len(token) + 18)
+                        phrase = sentence[start:end].strip(" ,;:-")
+                        break
 
     if not phrase:
-        words = sentence.split()
-        phrase = " ".join(words[: min(10, len(words))])
+        return {
+            "evidence_text": sentence,
+            "evidence_sentence": sentence,
+            "char_start": sent_start if sent_start >= 0 else None,
+            "char_end": (sent_start + len(sentence)) if sent_start >= 0 else None,
+            "evidence_quality": 0.35,
+            "is_sentence_fallback": True,
+        }
 
     phrase = phrase[:max_chars].strip()
     idx = low_text.find(phrase.lower()) if phrase else -1

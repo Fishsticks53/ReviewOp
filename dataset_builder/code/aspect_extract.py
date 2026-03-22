@@ -37,8 +37,11 @@ IMPLICIT_PATTERN_BANK = {
 }
 
 EXPLICIT_HINTS = {
-    "battery": "battery_life", "charging": "charging", "performance": "performance", "screen": "display", "display": "display",
-    "delivery": "delivery_reliability", "staff": "staff_behavior", "service": "service_speed", "food": "food_quality", "taste": "food_quality",
+    "battery": "battery_life", "battery life": "battery_life", "charge": "charging", "charging": "charging",
+    "performance": "performance", "screen": "display", "display": "display", "panel": "display",
+    "delivery": "delivery_reliability", "shipping": "delivery_speed", "courier": "delivery_reliability",
+    "staff": "staff_behavior", "service": "service_speed", "service center": "customer_support", "support": "customer_support",
+    "food": "food_quality", "taste": "food_quality",
     "price": "price", "network": "network_quality", "support": "customer_support", "room": "room_quality", "wait": "wait_time",
 }
 
@@ -81,7 +84,7 @@ def extract_explicit_aspects(text: str, max_candidates: int = 10) -> List[Dict]:
                         "aspect_seed": mapped,
                         "evidence_sentence": chunk,
                         "aspect_type": "explicit",
-                        "confidence": 0.8,
+                        "confidence": 0.9 if mapped in {"battery_life", "charging", "display", "service_speed", "delivery_speed", "delivery_reliability", "customer_support"} else 0.8,
                         "domain_family": "generic",
                     })
                     if len(found) >= max_candidates:
@@ -118,6 +121,39 @@ def extract_implicit_aspects(text: str, explicit_aspects: List[Dict]) -> List[Di
                     "aspect_type": "implicit",
                     "implicit_rationale": match,
                     "confidence": 0.84,
+                    "domain_family": family,
+                })
+                break
+
+    generic_implicit_map = {
+        "battery_life": ["lasts", "drains", "charge", "battery", "dies", "unplugged"],
+        "performance": ["slow", "lag", "freezes", "stutter", "hang", "crash", "crashed", "freezing"],
+        "service_speed": ["waited", "long wait", "took forever", "slow"],
+        "staff_behavior": ["rude", "ignored", "unfriendly", "dismissive"],
+        "delivery_speed": ["late", "delayed", "arrived after", "came late"],
+        "customer_support": ["support", "helpdesk", "ticket", "callback", "service center", "customer service"],
+        "food_quality": ["tasty", "bland", "fresh", "stale", "good", "bad"],
+        "display": ["screen", "bright", "dim", "flicker", "blue screen", "no gui"],
+        "network_quality": ["connected properly", "disconnect", "disconnects", "reconnect", "usb devices"],
+    }
+    sentiment_cues = {"good", "bad", "poor", "great", "terrible", "slow", "rude", "excellent", "awful", "awesome"}
+    for sent in sents:
+        low = sent.lower()
+        if _has_explicit_head("performance", sent) or _has_explicit_head("battery_life", sent) or _has_explicit_head("service_speed", sent):
+            continue
+        if not any(c in low for c in sentiment_cues):
+            continue
+        for canonical, cues in generic_implicit_map.items():
+            if canonical in explicit_tokens:
+                continue
+            if any(cue in low for cue in cues):
+                out.append({
+                    "aspect_raw": canonical,
+                    "aspect_seed": canonical,
+                    "evidence_sentence": sent,
+                    "aspect_type": "implicit",
+                    "implicit_rationale": "sentiment_cue_without_direct_aspect",
+                    "confidence": 0.72,
                     "domain_family": family,
                 })
                 break

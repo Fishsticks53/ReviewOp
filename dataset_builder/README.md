@@ -102,6 +102,39 @@ The builder prints acceptance gate signals at the end of each run:
 - sentence fallback evidence rate
 - implicit family coverage and target misses
 
+## Aspect Memory
+
+Aspect Memory stores aspect-term decisions in JSONL so future dataset builds can reuse prior mappings without introducing a database dependency.
+
+Files written by the memory layer:
+
+- `output/reports/aspect_memory/aspect_memory_events.jsonl`
+- `output/reports/aspect_memory/aspect_memory_promotions.jsonl`
+- `output/reports/aspect_memory/aspect_memory_calibration.json`
+
+Common modes:
+
+- `--memory-mode off`: do not read or write memory
+- `--memory-mode collect`: store candidates and evidence only
+- `--memory-mode resolve`: resolve aspect terms from memory when confidence is high enough
+- `--mode eval`: read existing `reviewlevel/normal/{train,val,test}.jsonl`, keep memory read-only, and write `output/reports/eval_report.json`
+- `--freeze-memory-during-eval true`: block all memory writes while evaluating
+
+Decision policies:
+
+- `--decision-policy deterministic`
+- `--decision-policy hybrid`
+- `--decision-policy stochastic`
+
+Example commands:
+
+```powershell
+python dataset_builder/code/main.py --mode all --decision-policy deterministic --memory-mode off --seed 42
+python dataset_builder/code/main.py --mode all --decision-policy hybrid --memory-mode resolve --min-confidence-for-hard-map 0.75 --decision-temperature 0.4 --seed 42
+python dataset_builder/code/main.py --mode all --decision-policy stochastic --decision-temperature 0.8 --seed 7
+python dataset_builder/code/main.py --workflow two-track --mode all --seed 42
+```
+
 ## Common failure cases
 
 - No rows produced: schema text column not detected and LLM fallback unavailable.

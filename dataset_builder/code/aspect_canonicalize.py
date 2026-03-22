@@ -45,7 +45,7 @@ ASPECT_ALIASES: Dict[str, str] = {
     "availability": "availability", "response": "response_time",
 }
 
-COLLAPSE_BLOCKLIST = {"quality", "service", "delivery"}
+COLLAPSE_BLOCKLIST = {"quality", "service", "delivery", "general", "experience"}
 
 
 # domain+phrase deterministic policy cache
@@ -126,23 +126,27 @@ def _rule_map(raw: str, evidence_sentence: str, domain: str, use_definitions: bo
 
     candidate = r.replace(" ", "_")
     if candidate in MASTER_TAXONOMY:
+        if candidate == "general_experience":
+            return candidate, 0.2
         score = 0.68
         if use_definitions:
             score = min(0.88, (score + _definition_compatibility(candidate, evidence_sentence)) / 2)
         return candidate, score
-    return f"other_{domain or 'general'}", 0.55
+    return f"other_{domain or 'general'}", 0.15
 
 
 def _apply_phrase_policy(domain: str, phrase: str, canonical: str, confidence: float) -> str:
     key = (domain or "general", phrase)
     prev = _PHRASE_POLICY_CACHE.get(key)
     if prev is None:
+        if canonical == "general_experience" or confidence < 0.35:
+            canonical = f"other_{domain or 'general'}"
         _PHRASE_POLICY_CACHE[key] = canonical
         return canonical
     if prev == canonical:
         return canonical
     # strict conflict resolution: keep prior unless new mapping is very high confidence
-    if confidence >= 0.9:
+    if confidence >= 0.92 and canonical != "general_experience":
         _PHRASE_POLICY_CACHE[key] = canonical
         return canonical
     return prev
@@ -169,6 +173,7 @@ def canonicalize_aspects(
     llm: LLMClient | None = None,
     max_canonical_share: float = 0.45,
     aspect_definitions_enabled: bool = True,
+    llm_min_confidence: float = 0.6,
 ) -> Tuple[List[Dict], Dict[str, str]]:
     mapping: Dict[str, str] = {}
     out: List[Dict] = []
@@ -185,7 +190,19 @@ def canonicalize_aspects(
         out.append(item)
 
     if llm is not None and out:
-        raws = sorted({a.get("aspect_raw", "") for a in out if a.get("aspect_raw")})[:25]
+        ambiguous = [
+            a
+            for a in out
+            if (
+                not a.get("aspect_canonical")
+                or str(a.get("aspect_canonical", "")).startswith("other_")
+                or float(a.get("confidence", 0.0)) < float(llm_min_confidence)
+            )
+        ]
+        raws = sorted({a.get("aspect_raw", "") for a in ambiguous if a.get("aspect_raw")})[:12]
+        if not raws:
+            out = apply_anti_collapse(out, max_share=max_canonical_share)
+            return out, mapping
         prompt = (
             ASPECT_MAP_PROMPT
             + f"\nAllowed taxonomy: {MASTER_TAXONOMY}\n"
