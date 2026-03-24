@@ -3,7 +3,6 @@
 .venv
 .vscode/
 .idea/
-*.txt
 requirements.in
 backend/__pycache__/
 backend/core/__pycache__/
@@ -21,6 +20,16 @@ dataset_builder/input/
 dataset_builder/output/
 ProtoBackend/input/
 ProtoBackend/outputs/
+protonet/input/*
+!protonet/input/reviewlevel/
+!protonet/input/reviewlevel/.gitkeep
+!protonet/input/episodic/
+!protonet/input/episodic/.gitkeep
+protonet/output/*
+!protonet/output/.gitkeep
+protonet/metadata/*
+!protonet/metadata/.gitkeep
+protonet/_tmp*/
 # Ignore all JSONL data artifacts globally
 *.jsonl
 

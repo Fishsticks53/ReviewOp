@@ -9,6 +9,13 @@ from mappings import DOMAIN_HINTS
 from utils import normalize_text
 
 
+DOMAIN_ALIASES = {
+    "restaurant": "food",
+    "hotel": "hospitality",
+    "telecom": "software",
+}
+
+
 def infer_domain(file_path: str, columns: List[str], texts: Iterable[str], aspects: Iterable[str] | None = None) -> str:
     scores = Counter()
     file_hint = Path(file_path).stem.lower()
@@ -43,4 +50,6 @@ def infer_domain(file_path: str, columns: List[str], texts: Iterable[str], aspec
     if not scores:
         return "generic"
     top_domain, top_score = scores.most_common(1)[0]
-    return top_domain if top_score > 0 else "generic"
+    if top_score <= 0:
+        return "generic"
+    return DOMAIN_ALIASES.get(top_domain, top_domain)

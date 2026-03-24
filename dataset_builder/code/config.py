@@ -49,6 +49,7 @@ class BuilderConfig:
     target_domain_weight: float = 2.0
     open_corpora_max_share: float = 0.40
     gold_benchmark_eval_only: bool = True
+    domain_agnostic_mode: str = "auto"
     
     n_way: int = 3
     k_shot: int = 2
@@ -57,13 +58,19 @@ class BuilderConfig:
     strict_quality_filter: bool = True
     target_multi_aspect_min: int = 2
     target_implicit_ratio: float = 0.2
+    min_implicit_vote_sources: int = 2
+    strong_senticnet_threshold: float = 0.8
     max_canonical_share: float = 0.45
     max_other_domain_share: float = 0.2
+    episodic_max_aspect_share: float = 0.35
     hard_negative_k: int = 2
     implicit_query_only: bool = True
     min_evidence_span_chars: int = 5
     require_phrase_evidence: bool = True
     drop_sentence_fallback: bool = True
+    conservative_second_aspect_extraction: bool = True
+    senticnet_enabled: bool = True
+    senticnet_resource_path: Path = PROJECT_ROOT / "resources" / "senticnet_seed.json"
     episode_class_balance_tolerance: float = 0.0
     enforce_labels_field: bool = True
     cross_domain_eval: bool = False

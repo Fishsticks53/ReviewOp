@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import csv
 import json
@@ -51,10 +51,9 @@ def load_rows(path: Path) -> Tuple[List[Dict[str, Any]], str, List[str]]:
 
 def ensure_output_dirs(output_dir: Path) -> None:
     for path in [
-        output_dir / "reviewlevel" / "normal",
-        output_dir / "reviewlevel" / "augmented",
-        output_dir / "episodic" / "normal",
-        output_dir / "episodic" / "augmented",
+        output_dir / "reviewlevel",
+        output_dir / "episodic",
+        output_dir / "reports"
     ]:
         path.mkdir(parents=True, exist_ok=True)
 

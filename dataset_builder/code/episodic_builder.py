@@ -522,11 +522,23 @@ def build_episodic_rows(review_rows: List[Dict]) -> List[Dict]:
                     "evidence_sentence": label.get("evidence_sentence", ""),
                     "domain": row.get("domain", "generic"),
                     "aspect": aspect,
-                    "implicit_aspect": label.get("implicit_aspect", aspect),
+                    "implicit_aspect": label.get("implicit_aspect") or label.get("metadata", {}).get("aspect_surface") or aspect,
                     "sentiment": label.get("sentiment", "neutral"),
                     "label_type": label.get("type", "explicit"),
+                    "confidence": float(label.get("confidence", 0.0)),
                     "split": row.get("split", "train"),
                     "source": row.get("source", ""),
+                    "metadata": {
+                        "aspect_family": label.get("metadata", {}).get("aspect_family", ""),
+                        "aspect_surface": label.get("metadata", {}).get("aspect_surface", label.get("implicit_aspect", aspect)),
+                        "evidence_quality": label.get("metadata", {}).get("evidence_quality", 0.0),
+                        "evidence_is_sentence_fallback": label.get("metadata", {}).get("evidence_is_sentence_fallback", True),
+                        "augmentation_sentence_evidence": label.get("metadata", {}).get("augmentation_sentence_evidence", False),
+                        "label_normalized_from": label.get("metadata", {}).get("label_normalized_from", ""),
+                        "vote_sources": label.get("metadata", {}).get("vote_sources", []),
+                        "senticnet_concept": label.get("metadata", {}).get("senticnet_concept", ""),
+                        "senticnet_polarity": label.get("metadata", {}).get("senticnet_polarity", 0.0),
+                    },
                 }
             )
     return out
