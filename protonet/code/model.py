@@ -7,9 +7,14 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from config import ProtonetConfig
-from encoder import HybridTextEncoder, format_input_text
-from projection_head import ProjectionHead
+try:
+    from .config import ProtonetConfig
+    from .encoder import HybridTextEncoder, format_input_text
+    from .projection_head import ProjectionHead
+except ImportError:
+    from config import ProtonetConfig
+    from encoder import HybridTextEncoder, format_input_text
+    from projection_head import ProjectionHead
 
 
 @dataclass

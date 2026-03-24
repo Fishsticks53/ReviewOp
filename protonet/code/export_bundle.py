@@ -6,8 +6,12 @@ from typing import Any, Dict, List
 
 import torch
 
-from config import ProtonetConfig
-from dataset_reader import write_json
+try:
+    from .config import ProtonetConfig
+    from .dataset_reader import write_json
+except ImportError:
+    from config import ProtonetConfig
+    from dataset_reader import write_json
 
 
 def export_model_bundle(

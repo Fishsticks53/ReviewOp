@@ -5,8 +5,12 @@ from typing import Any, Dict, List
 
 import torch
 
-from config import ProtonetConfig
-from progress import task_bar
+try:
+    from .config import ProtonetConfig
+    from .progress import task_bar
+except ImportError:
+    from config import ProtonetConfig
+    from progress import task_bar
 
 
 @dataclass

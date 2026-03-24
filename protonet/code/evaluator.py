@@ -8,8 +8,12 @@ import numpy as np
 from sklearn.metrics import accuracy_score, f1_score
 import torch
 
-from config import ProtonetConfig
-from progress import task_bar
+try:
+    from .config import ProtonetConfig
+    from .progress import task_bar
+except ImportError:
+    from config import ProtonetConfig
+    from progress import task_bar
 
 
 def _aspect_from_joint(label: str) -> str:

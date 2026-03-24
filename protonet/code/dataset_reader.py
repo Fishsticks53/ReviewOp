@@ -5,8 +5,12 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
-from config import ProtonetConfig, split_file
-from progress import track
+try:
+    from .config import ProtonetConfig, split_file
+    from .progress import track
+except ImportError:
+    from config import ProtonetConfig, split_file
+    from progress import track
 
 
 VALID_SPLITS = ("train", "val", "test")

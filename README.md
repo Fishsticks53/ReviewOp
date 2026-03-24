@@ -7,7 +7,7 @@ ReviewOp is a monorepo for aspect-based sentiment analysis workflows across four
 - `dataset_builder/`: Offline pipeline that converts raw review datasets into normalized review-level and episodic JSONL outputs.
 - `protonet/`: Standalone prototypical network training and export pipeline for few-shot experiments.
 
-The current repo layout replaces the older `ProtoBackend/` workspace with the active `protonet/` module.
+The current repo layout uses the active `protonet/` module for the implicit prototype pipeline.
 
 ## Repo Layout
 

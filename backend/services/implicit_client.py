@@ -63,7 +63,7 @@ class ImplicitClient:
         cleaned: List[ImplicitPrediction] = []
         for row in results or []:
             conf = float(row.get("confidence", 0.0))
-            if conf < settings.implicit_min_confidence:
+            if conf < settings.protonet_implicit_min_confidence:
                 continue
             cleaned.append(
                 {

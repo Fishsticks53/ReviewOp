@@ -10,11 +10,18 @@ from torch.amp import GradScaler, autocast
 from torch.nn import functional as F
 from torch.optim import AdamW
 
-from config import ProtonetConfig
-from evaluator import evaluate_episodes
-from model import ProtoNetModel
-from progress import task_bar
-from prototype_bank import PrototypeBank, build_global_prototype_bank
+try:
+    from .config import ProtonetConfig
+    from .evaluator import evaluate_episodes
+    from .model import ProtoNetModel
+    from .progress import task_bar
+    from .prototype_bank import PrototypeBank, build_global_prototype_bank
+except ImportError:
+    from config import ProtonetConfig
+    from evaluator import evaluate_episodes
+    from model import ProtoNetModel
+    from progress import task_bar
+    from prototype_bank import PrototypeBank, build_global_prototype_bank
 
 
 @dataclass

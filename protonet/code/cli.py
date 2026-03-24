@@ -4,14 +4,24 @@ import argparse
 from pathlib import Path
 import sys
 
-from config import INPUT_ROOT, METADATA_ROOT, OUTPUT_ROOT, ProtonetConfig, seed_everything
-from dataset_reader import load_input_dataset, write_jsonl
-from episode_builder import build_or_load_episode_sets
-from evaluator import evaluate_episodes
-from export_bundle import export_model_bundle, export_report
-from model import ProtoNetModel
-from reviewlevel_adapter import adapt_reviewlevel_rows
-from trainer import load_checkpoint, train_model
+try:
+    from .config import INPUT_ROOT, METADATA_ROOT, OUTPUT_ROOT, ProtonetConfig, seed_everything
+    from .dataset_reader import load_input_dataset, write_jsonl
+    from .episode_builder import build_or_load_episode_sets
+    from .evaluator import evaluate_episodes
+    from .export_bundle import export_model_bundle, export_report
+    from .model import ProtoNetModel
+    from .reviewlevel_adapter import adapt_reviewlevel_rows
+    from .trainer import load_checkpoint, train_model
+except ImportError:
+    from config import INPUT_ROOT, METADATA_ROOT, OUTPUT_ROOT, ProtonetConfig, seed_everything
+    from dataset_reader import load_input_dataset, write_jsonl
+    from episode_builder import build_or_load_episode_sets
+    from evaluator import evaluate_episodes
+    from export_bundle import export_model_bundle, export_report
+    from model import ProtoNetModel
+    from reviewlevel_adapter import adapt_reviewlevel_rows
+    from trainer import load_checkpoint, train_model
 
 
 def _build_config(args: argparse.Namespace) -> ProtonetConfig:
@@ -124,7 +134,10 @@ def run_export(args: argparse.Namespace) -> int:
     model = ProtoNetModel(cfg)
     checkpoint_path = Path(args.checkpoint) if args.checkpoint else cfg.checkpoint_dir / "best.pt"
     load_checkpoint(model, checkpoint_path)
-    from prototype_bank import build_global_prototype_bank
+    try:
+        from .prototype_bank import build_global_prototype_bank
+    except ImportError:
+        from prototype_bank import build_global_prototype_bank
 
     bank = build_global_prototype_bank(model, episodes_by_split["train"], cfg)
     bundle_path = export_model_bundle(

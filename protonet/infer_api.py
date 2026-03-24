@@ -19,8 +19,15 @@ if str(BACKEND_ROOT) not in sys.path:
 if str(CODE_ROOT) not in sys.path:
     sys.path.insert(0, str(CODE_ROOT))
 
-from backend.services.seq2seq_infer import Seq2SeqEngine
-from runtime_infer import load_runtime, split_clauses
+try:
+    from .code.runtime_infer import load_runtime, split_clauses
+except ImportError:
+    from code.runtime_infer import load_runtime, split_clauses
+
+try:
+    from backend.services.seq2seq_infer import Seq2SeqEngine
+except Exception:  # pragma: no cover
+    Seq2SeqEngine = None
 
 
 WHITESPACE_RE = re.compile(r"\s+")
@@ -41,7 +48,7 @@ def _load_runtime() -> Dict[str, Any]:
     return {
         "runtime": load_runtime(bundle_path),
         "bundle_path": str(bundle_path),
-        "seq2seq_engine": Seq2SeqEngine.load(),
+        "seq2seq_engine": Seq2SeqEngine.load() if Seq2SeqEngine is not None else None,
     }
 
 
@@ -67,7 +74,7 @@ def _predict_with_runtime(
                 continue
             sentiment = str(candidate.get("sentiment", "neutral")).strip().lower() or "neutral"
             sentiment_conf = float(candidate.get("confidence", 0.0))
-            if sentiment == "neutral":
+            if sentiment == "neutral" and sentiment_engine is not None:
                 sentiment, sentiment_conf = sentiment_engine.classify_sentiment_with_confidence(
                     evidence_text=snippet,
                     aspect=aspect,

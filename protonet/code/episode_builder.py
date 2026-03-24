@@ -7,9 +7,14 @@ from pathlib import Path
 import random
 from typing import Any, Dict, List
 
-from config import ProtonetConfig
-from dataset_reader import write_jsonl
-from progress import announce, track
+try:
+    from .config import ProtonetConfig
+    from .dataset_reader import write_jsonl
+    from .progress import announce, track
+except ImportError:
+    from config import ProtonetConfig
+    from dataset_reader import write_jsonl
+    from progress import announce, track
 
 
 def build_joint_label(row: Dict[str, Any], separator: str = "__") -> str:
