@@ -1,119 +1,152 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
-import time
-import urllib.request
-import urllib.error
-from typing import Any, Dict, Optional
+from dataclasses import dataclass
+from typing import Any, Dict, List
 
-from config import BuilderConfig, llm_available
+import requests
+
+from config import LLMSettings
 
 
-class LLMClient:
-    def __init__(self, cfg: BuilderConfig):
-        self.cfg = cfg
+@dataclass
+class LLMFallbackResult:
+    aspect: str
+    sentiment: str
+    confidence: float
+    is_novel_aspect: bool
 
-    def _post_json(self, url: str, payload: Dict[str, Any], headers: Dict[str, str]) -> Dict[str, Any]:
-        data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(url=url, data=data, method="POST")
-        for k, v in headers.items():
-            req.add_header(k, v)
-        with urllib.request.urlopen(req, timeout=self.cfg.llm.timeout_seconds) as resp:
-            body = resp.read().decode("utf-8", errors="replace")
-            return json.loads(body)
 
-    def _request_openai(self, prompt: str) -> str:
-        url = self.cfg.llm.openai_base_url.rstrip("/") + "/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {self.cfg.llm.openai_api_key}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "model": self.cfg.llm.openai_model,
-            "messages": [
-                {"role": "system", "content": "Return concise, valid JSON when asked."},
-                {"role": "user", "content": prompt},
-            ],
-            "temperature": 0.1,
-        }
-        out = self._post_json(url, payload, headers)
-        return out["choices"][0]["message"]["content"]
+class BaseLLMClient:
+    def infer(self, *, sentence: str, candidate_aspects: List[str]) -> LLMFallbackResult | None:
+        raise NotImplementedError
 
-    def _request_groq(self, prompt: str) -> str:
-        url = self.cfg.llm.groq_base_url.rstrip("/") + "/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {self.cfg.llm.groq_api_key}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "model": self.cfg.llm.groq_model,
-            "messages": [
-                {"role": "system", "content": "Return concise, valid JSON when asked."},
-                {"role": "user", "content": prompt},
-            ],
-            "temperature": 0.1,
-        }
-        out = self._post_json(url, payload, headers)
-        return out["choices"][0]["message"]["content"]
 
-    def _request_anthropic(self, prompt: str) -> str:
-        url = self.cfg.llm.anthropic_base_url.rstrip("/") + "/v1/messages"
-        headers = {
-            "x-api-key": self.cfg.llm.anthropic_api_key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        }
-        payload = {
-            "model": self.cfg.llm.anthropic_model,
-            "max_tokens": 800,
-            "temperature": 0.1,
-            "messages": [{"role": "user", "content": prompt}],
-        }
-        out = self._post_json(url, payload, headers)
-        content = out.get("content", [])
-        text = "".join(block.get("text", "") for block in content if isinstance(block, dict))
-        return text
-
-    def completion(self, prompt: str) -> Optional[str]:
-        if not llm_available(self.cfg):
-            return None
-        last_error: Exception | None = None
-        for attempt in range(1, self.cfg.llm.max_retries + 1):
-            try:
-                if self.cfg.llm.provider == "anthropic":
-                    return self._request_anthropic(prompt)
-                if self.cfg.llm.provider == "groq":
-                    return self._request_groq(prompt)
-                return self._request_openai(prompt)
-            except Exception as exc:
-                last_error = exc
-                if attempt == self.cfg.llm.max_retries:
-                    print(
-                        f"[LLM warning] provider={self.cfg.llm.provider} failed after {self.cfg.llm.max_retries} attempts: {type(last_error).__name__}: {last_error}"
-                    )
-                    return None
-                time.sleep(1.2 * attempt)
+class DisabledLLMClient(BaseLLMClient):
+    def infer(self, *, sentence: str, candidate_aspects: List[str]) -> LLMFallbackResult | None:
         return None
 
-    def json_completion(self, prompt: str) -> Dict[str, Any]:
-        text = self.completion(prompt)
-        if not text:
-            return {}
-        text = text.strip()
-        if text.startswith("```"):
-            text = text.strip("`")
-            if text.lower().startswith("json"):
-                text = text[4:].strip()
+
+def _parse_json_result(text: str) -> LLMFallbackResult | None:
+    if not text:
+        return None
+    try:
+        data: Dict[str, Any] = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    return LLMFallbackResult(
+        aspect=str(data.get("aspect", "general")).strip() or "general",
+        sentiment=str(data.get("sentiment", "neutral")).strip().lower() or "neutral",
+        confidence=float(data.get("confidence", 0.5)),
+        is_novel_aspect=bool(data.get("is_novel_aspect", False)),
+    )
+
+
+class GroqLLMClient(BaseLLMClient):
+    def __init__(self, settings: LLMSettings) -> None:
+        self.settings = settings
+
+    def infer(self, *, sentence: str, candidate_aspects: List[str]) -> LLMFallbackResult | None:
+        if not self.settings.groq_api_key:
+            return None
+
+        prompt = (
+            "Task: Extract the IMPLICIT aspect and sentiment from the review sentence. "
+            "An implicit aspect is one where the aspect word is NOT mentioned, but a symptom is present. "
+            "IMPORTANT: If the aspect word is literally in the text, it is EXPLICIT—do not return it. "
+            "Focus on symptoms: 'waited' -> service, 'lag' -> performance, 'blurred' -> camera. "
+            "Return valid JSON only with keys: aspect, sentiment, confidence, is_novel_aspect. "
+            f"Candidate aspects: {candidate_aspects}. Sentence: {sentence}"
+        )
         try:
-            data = json.loads(text)
-            return data if isinstance(data, dict) else {}
-        except Exception:
-            start = text.find("{")
-            end = text.rfind("}")
-            if start >= 0 and end > start:
-                try:
-                    data = json.loads(text[start : end + 1])
-                    return data if isinstance(data, dict) else {}
-                except Exception:
-                    return {}
-            return {}
+            response = requests.post(
+                f"{self.settings.groq_base_url.rstrip('/')}/chat/completions",
+                headers={
+                    "authorization": f"Bearer {self.settings.groq_api_key}",
+                    "content-type": "application/json",
+                },
+                json={
+                    "model": self.settings.groq_model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0,
+                    "max_completion_tokens": 128,
+                },
+                timeout=self.settings.timeout_seconds,
+            )
+            response.raise_for_status()
+        except Exception as e:
+            print(f"LLM Error (Groq): {e}")
+            if hasattr(e, 'response') and e.response is not None:
+                print(f"Response: {e.response.text}")
+            return None
+
+        payload = response.json()
+        text = (
+            payload.get("choices", [{}])[0]
+            .get("message", {})
+            .get("content", "")
+        )
+        return _parse_json_result(text)
+
+
+class OpenAILLMClient(BaseLLMClient):
+    def __init__(self, settings: LLMSettings) -> None:
+        self.settings = settings
+
+    def infer(self, *, sentence: str, candidate_aspects: List[str]) -> LLMFallbackResult | None:
+        if not self.settings.openai_api_key:
+            return None
+
+        prompt = (
+            "Task: Extract the IMPLICIT aspect and sentiment from the review sentence. "
+            "An implicit aspect is one where the aspect word is NOT mentioned, but a symptom is present. "
+            "IMPORTANT: If the aspect word is literally in the text, it is EXPLICIT—do not return it. "
+            "Focus on symptoms: 'waited' -> service, 'lag' -> performance, 'blurred' -> camera. "
+            "Return valid JSON only with keys: aspect, sentiment, confidence, is_novel_aspect. "
+            f"Candidate aspects: {candidate_aspects}. Sentence: {sentence}"
+        )
+        try:
+            response = requests.post(
+                f"{self.settings.openai_base_url.rstrip('/')}/chat/completions",
+                headers={
+                    "authorization": f"Bearer {self.settings.openai_api_key}",
+                    "content-type": "application/json",
+                },
+                json={
+                    "model": self.settings.openai_model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0,
+                    "max_completion_tokens": 128,
+                },
+                timeout=self.settings.timeout_seconds,
+            )
+            response.raise_for_status()
+        except Exception as e:
+            print(f"LLM Error (OpenAI): {e}")
+            if hasattr(e, 'response') and e.response is not None:
+                print(f"Response: {e.response.text}")
+            return None
+
+        payload = response.json()
+        text = (
+            payload.get("choices", [{}])[0]
+            .get("message", {})
+            .get("content", "")
+        )
+        return _parse_json_result(text)
+
+
+def build_llm_client(settings: LLMSettings, *, enabled: bool) -> BaseLLMClient:
+    if not enabled:
+        return DisabledLLMClient()
+    provider = settings.provider.lower()
+    if provider == "groq":
+        return GroqLLMClient(settings)
+    if provider == "openai":
+        return OpenAILLMClient(settings)
+    if settings.groq_api_key:
+        return GroqLLMClient(settings)
+    if settings.openai_api_key:
+        return OpenAILLMClient(settings)
+    return DisabledLLMClient()
+

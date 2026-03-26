@@ -62,9 +62,23 @@ def read_split_rows(path: Path, *, progress_enabled: bool) -> List[Dict[str, Any
 
 def validate_reviewlevel_rows(rows: List[Dict[str, Any]], split: str) -> None:
     for index, row in enumerate(rows):
+        labels = row.get("labels")
+        if (labels is None or not isinstance(labels, list) or not labels) and isinstance(row.get("implicit"), dict):
+            implicit = row.get("implicit", {})
+            labels = [
+                {
+                    "aspect": aspect,
+                    "implicit_aspect": aspect,
+                    "sentiment": implicit.get("aspect_sentiments", {}).get(aspect, implicit.get("dominant_sentiment", "neutral")),
+                    "confidence": float(implicit.get("aspect_confidence", {}).get(aspect, implicit.get("avg_confidence", 0.5))),
+                    "evidence_sentence": row.get("source_text", row.get("review_text", "")),
+                }
+                for aspect in implicit.get("aspects", []) or []
+            ]
+            row["labels"] = labels
         if "labels" not in row or not isinstance(row["labels"], list) or not row["labels"]:
             raise ValueError(f"reviewlevel row {index} in split {split} has no labels")
-        if not row.get("review_text") and not row.get("clean_text"):
+        if not row.get("review_text") and not row.get("clean_text") and not row.get("source_text"):
             raise ValueError(f"reviewlevel row {index} in split {split} is missing review text")
         if row.get("split") and str(row["split"]).lower() != split:
             raise ValueError(f"reviewlevel row {index} in split {split} declares split {row['split']}")
@@ -74,6 +88,28 @@ def validate_episodic_rows(rows: List[Dict[str, Any]], split: str) -> str:
     if not rows:
         raise ValueError(f"No episodic rows found for split {split}")
     first = rows[0]
+    if "implicit" in first and isinstance(first.get("implicit"), dict):
+        expanded: List[Dict[str, Any]] = []
+        for row in rows:
+            implicit = row.get("implicit", {})
+            for idx, aspect in enumerate(implicit.get("aspects", []) or [], start=1):
+                expanded.append(
+                    {
+                        "example_id": f"{row.get('id')}_e{idx}",
+                        "parent_review_id": row.get("id"),
+                        "review_text": row.get("source_text", row.get("review_text", "")),
+                        "evidence_sentence": row.get("source_text", row.get("review_text", "")),
+                        "domain": row.get("domain", "unknown"),
+                        "aspect": aspect,
+                        "implicit_aspect": aspect,
+                        "sentiment": implicit.get("aspect_sentiments", {}).get(aspect, implicit.get("dominant_sentiment", "neutral")),
+                        "label_type": "implicit",
+                        "confidence": float(implicit.get("aspect_confidence", {}).get(aspect, implicit.get("avg_confidence", 0.5))),
+                        "split": row.get("split", split),
+                    }
+                )
+        rows[:] = expanded
+        return "examples"
     if "support_set" in first and "query_set" in first:
         for index, row in enumerate(rows):
             if not isinstance(row.get("support_set"), list) or not isinstance(row.get("query_set"), list):

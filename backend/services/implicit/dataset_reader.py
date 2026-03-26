@@ -87,13 +87,55 @@ def get_episode_path(split: str) -> Path:
 def load_reviewlevel_split(split: str) -> List[Dict[str, Any]]:
     clean_split = _validate_split(split)
     rows = load_jsonl(get_reviewlevel_path(clean_split))
-    return _filter_by_declared_split(rows, clean_split)
+    normalized: List[Dict[str, Any]] = []
+    for row in _filter_by_declared_split(rows, clean_split):
+        if "labels" not in row and isinstance(row.get("implicit"), dict):
+            implicit = row.get("implicit", {})
+            labels = []
+            for aspect in implicit.get("aspects", []) or []:
+                labels.append(
+                    {
+                        "aspect": aspect,
+                        "implicit_aspect": aspect,
+                        "sentiment": implicit.get("aspect_sentiments", {}).get(aspect, implicit.get("dominant_sentiment", "neutral")),
+                        "confidence": float(implicit.get("aspect_confidence", {}).get(aspect, implicit.get("avg_confidence", 0.5))),
+                        "type": "implicit",
+                        "evidence_sentence": row.get("source_text", row.get("review_text", "")),
+                    }
+                )
+            row = dict(row)
+            row["labels"] = labels
+            row["review_text"] = row.get("review_text") or row.get("source_text", "")
+        normalized.append(row)
+    return normalized
 
 
 def load_episode_split(split: str) -> List[Dict[str, Any]]:
     clean_split = _validate_split(split)
     rows = load_jsonl(get_episode_path(clean_split))
-    return _filter_by_declared_split(rows, clean_split)
+    normalized: List[Dict[str, Any]] = []
+    for row in _filter_by_declared_split(rows, clean_split):
+        if "implicit" in row and isinstance(row.get("implicit"), dict):
+            implicit = row.get("implicit", {})
+            for idx, aspect in enumerate(implicit.get("aspects", []) or [], start=1):
+                normalized.append(
+                    {
+                        "example_id": f"{row.get('id')}_e{idx}",
+                        "parent_review_id": row.get("id"),
+                        "review_text": row.get("source_text", row.get("review_text", "")),
+                        "evidence_sentence": row.get("source_text", row.get("review_text", "")),
+                        "domain": row.get("domain", "unknown"),
+                        "aspect": aspect,
+                        "implicit_aspect": aspect,
+                        "sentiment": implicit.get("aspect_sentiments", {}).get(aspect, implicit.get("dominant_sentiment", "neutral")),
+                        "label_type": "implicit",
+                        "confidence": float(implicit.get("aspect_confidence", {}).get(aspect, implicit.get("avg_confidence", 0.5))),
+                        "split": clean_split,
+                    }
+                )
+        else:
+            normalized.append(row)
+    return normalized
 
 
 def summarize_dataset(rows: List[Dict[str, Any]], label_key: str) -> Dict[str, Any]:

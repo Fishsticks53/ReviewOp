@@ -1,70 +1,77 @@
 from __future__ import annotations
 
-import csv
 import json
-import shutil
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, List
+import xml.etree.ElementTree as ET
+
+import pandas as pd
 
 
-def scan_raw_files(input_dir: Path) -> List[Path]:
+SUPPORTED_SUFFIXES = {".csv", ".tsv", ".json", ".jsonl", ".xlsx", ".xls", ".xml"}
+
+
+def flatten_one_level(payload: Dict[str, Any]) -> Dict[str, Any]:
+    flat: Dict[str, Any] = {}
+    for key, value in payload.items():
+        if isinstance(value, dict):
+            for inner_key, inner_value in value.items():
+                flat[f"{key}_{inner_key}"] = inner_value
+        else:
+            flat[key] = value
+    return flat
+
+
+def list_input_files(input_dir: Path) -> List[Path]:
     if not input_dir.exists():
         return []
-    supported = {".csv", ".json", ".jsonl"}
-    return sorted([p for p in input_dir.rglob("*") if p.is_file() and p.suffix.lower() in supported])
+    return sorted(
+        path for path in input_dir.iterdir()
+        if path.is_file() and path.suffix.lower() in SUPPORTED_SUFFIXES
+    )
 
 
-def load_rows(path: Path) -> Tuple[List[Dict[str, Any]], str, List[str]]:
+def load_file_to_dataframe(path: Path) -> pd.DataFrame:
     suffix = path.suffix.lower()
-    if suffix == ".csv":
-        with path.open("r", encoding="utf-8", errors="replace", newline="") as f:
-            rows = [dict(r) for r in csv.DictReader(f)]
-        cols = list(rows[0].keys()) if rows else []
-        return rows, "csv", cols
-    if suffix == ".jsonl":
-        rows: List[Dict[str, Any]] = []
-        with path.open("r", encoding="utf-8", errors="replace") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                payload = json.loads(line)
-                if isinstance(payload, dict):
-                    rows.append(payload)
-        cols = sorted({k for r in rows for k in r.keys()})
-        return rows, "jsonl", cols
-    payload = json.loads(path.read_text(encoding="utf-8", errors="replace"))
-    if isinstance(payload, list):
-        rows = [r for r in payload if isinstance(r, dict)]
-    elif isinstance(payload, dict):
-        if isinstance(payload.get("data"), list):
-            rows = [r for r in payload["data"] if isinstance(r, dict)]
-        elif isinstance(payload.get("records"), list):
-            rows = [r for r in payload["records"] if isinstance(r, dict)]
+    if suffix in {".csv", ".tsv"}:
+        frame = pd.read_csv(path, sep="\t" if suffix == ".tsv" else None, engine="python")
+    elif suffix in {".xlsx", ".xls"}:
+        frame = pd.read_excel(path)
+    elif suffix == ".json":
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(payload, list):
+            frame = pd.DataFrame([flatten_one_level(row) if isinstance(row, dict) else {"value": row} for row in payload])
+        elif isinstance(payload, dict) and "records" in payload and isinstance(payload["records"], list):
+            frame = pd.DataFrame([flatten_one_level(row) if isinstance(row, dict) else {"value": row} for row in payload["records"]])
         else:
-            rows = [payload]
-    else:
+            frame = pd.DataFrame([flatten_one_level(payload if isinstance(payload, dict) else {"value": payload})])
+    elif suffix == ".jsonl":
+        rows = [flatten_one_level(json.loads(line)) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        frame = pd.DataFrame(rows)
+    elif suffix == ".xml":
+        root = ET.parse(path).getroot()
         rows = []
-    cols = sorted({k for r in rows for k in r.keys()})
-    return rows, "json", cols
+        for child in list(root):
+            record = {f"attr_{k}": v for k, v in child.attrib.items()}
+            for sub in list(child):
+                record[sub.tag] = (sub.text or "").strip()
+            if not record and (child.text or "").strip():
+                record[child.tag] = (child.text or "").strip()
+            rows.append(record)
+        frame = pd.DataFrame(rows)
+    else:
+        raise ValueError(f"Unsupported input file: {path}")
+
+    if not frame.empty:
+        frame = frame.copy()
+        frame["source_file"] = path.name
+    return frame
 
 
-def ensure_output_dirs(output_dir: Path) -> None:
-    for path in [
-        output_dir / "reviewlevel",
-        output_dir / "episodic",
-        output_dir / "reports"
-    ]:
-        path.mkdir(parents=True, exist_ok=True)
+def load_inputs(input_dir: Path) -> pd.DataFrame:
+    frames = [load_file_to_dataframe(path) for path in list_input_files(input_dir)]
+    frames = [frame for frame in frames if not frame.empty]
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, ignore_index=True, sort=False)
 
-
-def clean_previous_outputs(output_dir: Path) -> None:
-    if output_dir.exists():
-        shutil.rmtree(output_dir)
-
-
-def write_jsonl(path: Path, rows: Iterable[Dict[str, Any]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as f:
-        for row in rows:
-            f.write(json.dumps(row, ensure_ascii=False) + "\n")

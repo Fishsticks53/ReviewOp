@@ -4,7 +4,7 @@ ReviewOp is a monorepo for aspect-based sentiment analysis workflows across four
 
 - `frontend/`: React + Vite UI for admin analytics and the user review portal.
 - `backend/`: FastAPI + MySQL application for inference, analytics, graph views, jobs, and user flows.
-- `dataset_builder/`: Offline pipeline that converts raw review datasets into normalized review-level and episodic JSONL outputs.
+- `dataset_builder/`: Offline pipeline that produces explicit and implicit JSONL datasets.
 - `protonet/`: Standalone prototypical network training and export pipeline for few-shot experiments.
 
 The current repo layout uses the active `protonet/` module for the implicit prototype pipeline.
@@ -107,24 +107,23 @@ The Vite dev server proxies API requests to `http://127.0.0.1:8000` by default. 
 Place raw files in `dataset_builder/input/`, then run:
 
 ```powershell
-cd dataset_builder\code
-python build_dataset.py
+python dataset_builder\code\build_dataset.py --input-dir dataset_builder\input --output-dir dataset_builder\output
 ```
 
 This writes:
 
-- review-level data to `dataset_builder/output/reviewlevel/`
-- episodic data to `dataset_builder/output/episodic/`
+- explicit data to `dataset_builder/output/explicit/`
+- implicit data to `dataset_builder/output/implicit/`
 - quality reports to `dataset_builder/output/reports/`
 
 See `dataset_builder/README.md` for CLI flags and output details.
 
 ### 2. Train the ProtoNet pipeline
 
-The ProtoNet module can train from either episodic or review-level JSONL input. For the common episodic flow:
+The ProtoNet module can train from the implicit output after copying or adapting it into `protonet/input/episodic/`:
 
 ```powershell
-Copy-Item "dataset_builder\output\episodic\*" -Destination "protonet\input\episodic\" -Recurse -Force
+Copy-Item "dataset_builder\output\implicit\*" -Destination "protonet\input\episodic\" -Recurse -Force
 python protonet\code\cli.py train --input-type episodic --force-rebuild-episodes --encoder-backend transformer --production-require-transformer
 ```
 
