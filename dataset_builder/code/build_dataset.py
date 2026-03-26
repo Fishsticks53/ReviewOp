@@ -16,7 +16,7 @@ from io_utils import load_inputs
 from schema_detect import detect_schema
 from splitter import choose_stratify_values, preliminary_split, split_holdout
 from utils import stable_id, utc_now_iso, write_json, write_jsonl
-from mappings import GENERIC_REVIEW_ASPECT_SEEDS
+from mappings import load_priors
 
 
 def _clean_frame(frame: pd.DataFrame, cfg: BuilderConfig) -> tuple[pd.DataFrame, Dict[str, int]]:
@@ -128,14 +128,24 @@ def run_pipeline(cfg: BuilderConfig) -> Dict[str, Any]:
     )
 
     train_rows = train_frame.to_dict(orient="records")
-    learned_seed_info = learn_aspect_seed_vocab(train_rows, text_column=text_column or "", vocab_size=cfg.aspect_vocab_size) if text_column else {
+    
+    # Load domain-specific priors (seeds and symptom mappings)
+    fallback_seed_vocab, symptom_map = load_priors(cfg.priors_path)
+    
+    learned_seed_info = learn_aspect_seed_vocab(
+        train_rows, 
+        text_column=text_column or "", 
+        vocab_size=cfg.aspect_vocab_size,
+        seed_vocab=fallback_seed_vocab
+    ) if text_column else {
         "learned_seed_vocab": [],
         "learned_seed_support": {},
         "learned_seed_total_docs": 0,
     }
     learned_seed_vocab = set(learned_seed_info["learned_seed_vocab"])
-    fallback_seed_vocab = set(GENERIC_REVIEW_ASPECT_SEEDS)
-    seed_vocab = learned_seed_vocab or fallback_seed_vocab
+    
+    # FIX: Use union instead of conditional OR to ensure core aspects are ALWAYS present for routing
+    seed_vocab = learned_seed_vocab | fallback_seed_vocab
     candidate_aspects = discover_aspects(
         train_rows,
         text_column=text_column or "",
@@ -149,9 +159,10 @@ def run_pipeline(cfg: BuilderConfig) -> Dict[str, Any]:
         train_rows,
         text_column=text_column or "",
         candidate_aspects=candidate_aspects,
-        seed_vocab=seed_vocab or fallback_seed_vocab,
+        seed_vocab=seed_vocab,
         confidence_threshold=cfg.confidence_threshold,
         learned_seed_vocab=learned_seed_info["learned_seed_vocab"],
+        symptom_map=symptom_map,
     ) if text_column else {}
 
     explicit_train: List[Dict[str, Any]] = []
@@ -164,7 +175,16 @@ def run_pipeline(cfg: BuilderConfig) -> Dict[str, Any]:
         if text_column:
             # Only enable LLM fallback for the first N rows to save cost
             llm_enabled_for_row = cfg.enable_llm_fallback and (idx < cfg.llm_sample_size)
-            imp_row = build_implicit_row(row, text_column=text_column, candidate_aspects=candidate_aspects, seed_vocab=seed_vocab or fallback_seed_vocab, confidence_threshold=cfg.confidence_threshold, llm_enabled=llm_enabled_for_row, llm_settings=llm_settings)
+            imp_row = build_implicit_row(
+                row, 
+                text_column=text_column, 
+                candidate_aspects=candidate_aspects, 
+                seed_vocab=seed_vocab, 
+                confidence_threshold=cfg.confidence_threshold, 
+                llm_enabled=llm_enabled_for_row, 
+                llm_settings=llm_settings,
+                symptom_map=symptom_map
+            )
             implicit_train.append(imp_row)
 
     # Journal Worthiness Improvement: Promote novel aspects from LLM for subsequent passes
@@ -198,7 +218,16 @@ def run_pipeline(cfg: BuilderConfig) -> Dict[str, Any]:
         explicit_holdout.append({**explicit_row, "split": split_name})
         if text_column:
             llm_enabled_for_row = cfg.enable_llm_fallback and (idx < cfg.llm_sample_size)
-            implicit_row = build_implicit_row(row, text_column=text_column, candidate_aspects=candidate_aspects, seed_vocab=seed_vocab or fallback_seed_vocab, confidence_threshold=cfg.confidence_threshold, llm_enabled=llm_enabled_for_row, llm_settings=llm_settings)
+            implicit_row = build_implicit_row(
+                row, 
+                text_column=text_column, 
+                candidate_aspects=candidate_aspects, 
+                seed_vocab=seed_vocab, 
+                confidence_threshold=cfg.confidence_threshold, 
+                llm_enabled=llm_enabled_for_row, 
+                llm_settings=llm_settings,
+                symptom_map=symptom_map
+            )
             implicit_holdout.append({**implicit_row, "split": split_name})
 
     explicit_by_split = {

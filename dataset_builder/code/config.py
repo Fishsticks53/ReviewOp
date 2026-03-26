@@ -45,6 +45,7 @@ class BuilderConfig:
     train_only_aspect_sample_size: int = 10_000
     max_one_hot_cardinality: int = 50
     reports_subdir: str = "reports"
+    priors_path: Path = (ROOT / "priors" / "generic_reviews.json").resolve()
     llm: LLMSettings = field(default_factory=LLMSettings)
 
     @property

@@ -1,4 +1,6 @@
-from __future__ import annotations
+import json
+from pathlib import Path
+from typing import Any, Dict, Set
 
 
 CONTRASTIVE_CONJUNCTIONS = ("but", "however", "although", "while", "whereas", "yet")
@@ -8,6 +10,14 @@ TEXT_STOPWORDS = {
     "has", "have", "i", "if", "in", "is", "it", "its", "my", "of", "on",
     "or", "our", "so", "that", "the", "their", "them", "there", "these",
     "they", "this", "to", "was", "we", "were", "with", "you", "your",
+    "than", "which", "will", "all", "about", "what", "where", "when", "who", "whom",
+    "how", "can", "could", "would", "should", "may", "might", "must", "shall",
+    "am", "was", "were", "been", "being", "do", "does", "did", "done", "doing",
+    "have", "has", "had", "having", "me", "him", "her", "us", "them", "his", "her",
+    "its", "our", "their", "this", "that", "these", "those", "each", "every",
+    "any", "all", "some", "none", "no", "not", "only", "own", "other", "another",
+    "very", "quite", "just", "now", "then", "there", "here", "again", "too",
+    "also", "really", "even", "more", "most", "less", "least", "well", "away",
 }
 
 GENERIC_ASPECT_STOPWORDS = {
@@ -17,6 +27,10 @@ GENERIC_ASPECT_STOPWORDS = {
     "great", "best", "more", "most", "some", "many", "much", "also", "really",
     "been", "being", "get", "got", "going", "keep", "kept", "take", "taken",
     "say", "said", "see", "seen", "use", "used", "using", "come", "came",
+    "stay", "stayed", "staying", "give", "given", "giving",
+    "computer", "laptop", "phone", "device", "restaurant", "pizza", "wine", "food",
+    "sauce", "meal", "drink", "service", "program", "app", "application", "software",
+    "bit", "part", "side", "area", "case", "end", "back", "front", "top", "bottom",
 }
 
 POSITIVE_WORDS = {
@@ -24,6 +38,7 @@ POSITIVE_WORDS = {
     "easy", "excellent", "fantastic", "fast", "friendly", "fresh", "good",
     "great", "helpful", "intuitive", "love", "loved", "nice", "perfect",
     "quick", "responsive", "smooth", "solid", "stunning", "tasty", "worth",
+    "wonderful", "delighted", "superb", "brilliant", "outstanding",
 }
 
 NEGATIVE_WORDS = {
@@ -31,102 +46,25 @@ NEGATIVE_WORDS = {
     "crash", "crashes", "crashed", "defect", "delay", "delayed", "difficult",
     "dirty", "drains", "expensive", "hate", "lag", "laggy", "late", "noisy",
     "overpriced", "poor", "rude", "slow", "terrible", "uncomfortable",
-    "unhelpful", "worse", "worst",
+    "unhelpful", "worse", "worst", "horrible", "annoying", "frustrating",
 }
 
 TARGET_COLUMN_HINTS = ("label", "class", "category", "rating", "sentiment", "target")
 
-GENERIC_REVIEW_ASPECT_SEEDS = {
-    "battery", "camera", "comfort", "delivery", "display", "food", "performance",
-    "price", "quality", "service", "taste", "connectivity", "usability",
-    "ambiance", "stability", "durability", "portability", "sound", "storage",
-    "memory", "safety", "cleanliness", "value", "speed", "design", "size",
-    "weight", "noise", "heat", "software", "hardware", "wifi", "bluetooth",
-    "packaging", "warranty", "accessories", "staff", "wait_time", "atmosphere",
-    "parking", "resolution", "efficiency", "reliability", "ergonomics"
-}
 
-# Symptom-to-Aspect mapping for indirect/implicit reasoning
-SYMPTOM_MAP = {
-    "waited": "service",
-    "waiting": "service",
-    "seating": "service",
-    "seated": "service",
-    "staff": "service",
-    "waiter": "service",
-    "host": "service",
-    "manager": "service",
-    "ordered": "service",
-    "dropping": "connectivity",
-    "dropped": "connectivity",
-    "signal": "connectivity",
-    "connection": "connectivity",
-    "wifi": "connectivity",
-    "lag": "performance",
-    "laggy": "performance",
-    "stutter": "performance",
-    "pointer": "usability",
-    "cursor": "usability",
-    "navigation": "usability",
-    "mousepad": "usability",
-    "finger": "usability",
-    "click": "usability",
-    "minutes": "service",
-    "slow": "performance",
-    "bitter": "taste",
-    "salty": "taste",
-    "bland": "taste",
-    "tasty": "food",
-    "sour": "taste",
-    "sweet": "taste",
-    "spicy": "taste",
-    "flavor": "taste",
-    "pricey": "price",
-    "expensive": "price",
-    "affordable": "price",
-    "stalling": "stability",
-    "crash": "stability",
-    "crashed": "stability",
-    "quiet": "noise",
-    "loud": "noise",
-    "silent": "noise",
-    "buzzing": "noise",
-    "hot": "heat",
-    "warm": "heat",
-    "overheating": "heat",
-    "blurred": "camera",
-    "dim": "display",
-    "bright": "display",
-    "grainy": "display",
-    "heavy": "weight",
-    "light": "weight",
-    "bugs": "software",
-    "glitch": "software",
-    "unresponsive": "performance",
-    "reloads": "stability",
-    "reloading": "stability",
-    "cramped": "comfort",
-    "spacious": "comfort",
-    "seat": "comfort",
-    "wooden": "comfort",
-    "cheap": "price",
-    "breaking": "durability",
-    "bulk": "size",
-    "roomy": "size",
-    "small": "size",
-    "tiny": "size",
-    "burnt": "food",
-    "overcooked": "food",
-    "raw": "food",
-    "undercooked": "food",
-    "hour": "wait_time",
-    "forever": "wait_time",
-    "long": "wait_time",
-    "shorting": "hardware",
-    "broken": "hardware",
-    "defective": "hardware",
-    "webcam": "hardware",
-    "mic": "hardware",
-    "speaker": "hardware",
-    "reboot": "stability",
-}
+def load_priors(priors_path: Path) -> tuple[set[str], dict[str, str]]:
+    """
+    Loads domain-specific priors from a JSON file.
+    Raises FileNotFoundError if missing to prevent silent failures.
+    """
+    if not priors_path.exists():
+        raise FileNotFoundError(f"CRITICAL: Domain priors not found at {priors_path.resolve()}. ")
+        
+    try:
+        with open(priors_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            seeds = set(data.get("generic_review_aspect_seeds", []))
+            symptoms = data.get("symptom_map", {})
+            return seeds, symptoms
+    except Exception as e:
+        raise ValueError(f"CRITICAL: Failed to parse domain priors JSON: {e}")

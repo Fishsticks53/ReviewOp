@@ -9,10 +9,8 @@ from typing import Any, Dict, List, Tuple
 from mappings import (
     CONTRASTIVE_CONJUNCTIONS,
     GENERIC_ASPECT_STOPWORDS,
-    GENERIC_REVIEW_ASPECT_SEEDS,
     NEGATIVE_WORDS,
     POSITIVE_WORDS,
-    SYMPTOM_MAP,
     TEXT_STOPWORDS,
 )
 from llm_utils import build_llm_client
@@ -85,14 +83,18 @@ def _aspect_rejection_reason(aspect: str, *, seed_vocab: set[str] | None = None)
     tokens = aspect.split()
     if not tokens:
         return "empty"
-    seeds = seed_vocab if seed_vocab is not None else GENERIC_REVIEW_ASPECT_SEEDS
+    seeds = seed_vocab if seed_vocab is not None else set()
     if any(token in GENERIC_ASPECT_STOPWORDS or token in TEXT_STOPWORDS for token in tokens):
         return "contains_stopword_token"
     if all(token in TEXT_STOPWORDS for token in tokens):
         return "all_stopwords"
     if len(tokens) == 1:
+        # Strict for one-word aspects: must NOT be polar words and should ideally 
+        # relate to the domain (if seed_vocab is provided)
         if aspect in POSITIVE_WORDS or aspect in NEGATIVE_WORDS:
             return "polar_word"
+        # If we have a seed vocab, one-word candidates not in it are suspicious 
+        # unless they are very frequent (handled by discovery ranking later)
         return None
     if len(tokens) > 3:
         return "too_long"
@@ -231,8 +233,9 @@ def learn_aspect_seed_vocab(
     *,
     text_column: str,
     vocab_size: int,
+    seed_vocab: set[str] | None = None,
 ) -> Dict[str, Any]:
-    learned: List[str] = discover_aspects(train_rows, text_column=text_column, vocab_size=vocab_size, seed_vocab=set())
+    learned: List[str] = discover_aspects(train_rows, text_column=text_column, vocab_size=vocab_size, seed_vocab=seed_vocab)
     support = Counter()
     purity = Counter()
     total_docs = 0
@@ -263,7 +266,7 @@ def discover_aspects(
     vocab_size: int,
     seed_vocab: set[str] | None = None,
 ) -> List[str]:
-    seed_vocab = set(seed_vocab or GENERIC_REVIEW_ASPECT_SEEDS)
+    seed_vocab = set(seed_vocab or set())
     doc_count: Counter[str] = Counter()
     term_score: Counter[str] = Counter()
     total_docs = 0
@@ -362,7 +365,7 @@ def _split_contrastive(sentence: str) -> List[str]:
     return valid_parts if valid_parts else [sentence]
 
 
-def _aspect_lexical_score(text: str, aspect: str, *, seed_vocab: set[str]) -> float:
+def _aspect_lexical_score(text: str, aspect: str, *, seed_vocab: set[str], symptom_map: dict[str, str]) -> float:
     if not _is_valid_aspect(aspect, seed_vocab=seed_vocab):
         return 0.0
     tokens = tokenize(text.lower())
@@ -376,7 +379,7 @@ def _aspect_lexical_score(text: str, aspect: str, *, seed_vocab: set[str]) -> fl
         return -10.0 # Strict penalty for explicit mentions
         
     # Symptom Mapping: Reward indirect signals
-    for symptom, target_aspect in SYMPTOM_MAP.items():
+    for symptom, target_aspect in symptom_map.items():
         if target_aspect == aspect and symptom in tokens:
             score += 5.0
             
@@ -472,6 +475,7 @@ def _score_clause(
     seed_vocab: set[str],
     llm_client: Any | None,
     confidence_threshold: float,
+    symptom_map: dict[str, str],
 ) -> tuple[str | None, str, float, bool]:
     if not candidate_aspects:
         return None, infer_sentiment(clause), 0.0, False
@@ -485,14 +489,14 @@ def _score_clause(
     
     # Research-Grade Improvement: allow clauses with SYMPTOM hits to pass even without traditional sentiment hits.
     # This captures implicit signals like "pointer not moving" which are inherently negative but lack 'bad' keywords.
-    has_symptom = any(s.lower() in clause_tokens for s in SYMPTOM_MAP)
+    has_symptom = any(s.lower() in clause_tokens for s in symptom_map)
     
     if (sentiment_hits == 0 or sentiment_evidence <= 0.0) and not has_symptom:
         return None, infer_sentiment(clause), 0.0, False
 
     scores = []
     for aspect in candidate_aspects:
-        lexical = _aspect_lexical_score(clause, aspect, seed_vocab=seed_vocab)
+        lexical = _aspect_lexical_score(clause, aspect, seed_vocab=seed_vocab, symptom_map=symptom_map)
         window_support = _aspect_window_support(clause_tokens, aspect)
         scores.append(lexical + window_support)
     probs = _softmax(scores)
@@ -550,7 +554,9 @@ def collect_implicit_diagnostics(
     seed_vocab: set[str],
     confidence_threshold: float,
     learned_seed_vocab: List[str] | None = None,
+    symptom_map: dict[str, str] = None,
 ) -> Dict[str, Any]:
+    symptom_map = symptom_map or {}
     rejection_reasons: Counter[str] = Counter()
     rejected_examples: List[Dict[str, str]] = []
     aspect_counts: Counter[str] = Counter()
@@ -576,6 +582,7 @@ def collect_implicit_diagnostics(
                     seed_vocab=seed_vocab,
                     llm_client=None,
                     confidence_threshold=confidence_threshold,
+                    symptom_map=symptom_map,
                 )
                 clause_tokens = tokenize(clause)
                 _, clause_negations, clause_sentiment_hits = _sentiment_evidence(clause_tokens)
@@ -626,7 +633,9 @@ def build_implicit_row(
     confidence_threshold: float,
     llm_enabled: bool = False,
     llm_settings: Any | None = None,
+    symptom_map: dict[str, str] = None,
 ) -> Dict[str, Any]:
+    symptom_map = symptom_map or {}
     text = normalize_whitespace(row.get(text_column, ""))
     sentences = split_sentences(text)
     llm_client = build_llm_client(llm_settings, enabled=llm_enabled) if llm_settings is not None else None
@@ -659,6 +668,7 @@ def build_implicit_row(
                 seed_vocab=seed_vocab,
                 llm_client=llm_client,
                 confidence_threshold=confidence_threshold,
+                symptom_map=symptom_map,
             )
             if not candidates:
                 tier = 3
