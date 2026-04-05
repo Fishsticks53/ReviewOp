@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass
 import json
 from pathlib import Path
@@ -14,13 +15,13 @@ try:
     from .config import ProtonetConfig
     from .evaluator import evaluate_episodes
     from .model import ProtoNetModel
-    from .progress import task_bar
+    from .progress import announce, task_bar
     from .prototype_bank import PrototypeBank, build_global_prototype_bank
 except ImportError:
     from config import ProtonetConfig
     from evaluator import evaluate_episodes
     from model import ProtoNetModel
-    from progress import task_bar
+    from progress import announce, task_bar
     from prototype_bank import PrototypeBank, build_global_prototype_bank
 
 
@@ -138,10 +139,32 @@ def _warmup_representations(model: ProtoNetModel, cfg: ProtonetConfig, optimizer
 
 
 def _trainable_parameter_groups(model: ProtoNetModel, cfg: ProtonetConfig) -> List[Dict[str, Any]]:
-    groups: List[Dict[str, Any]] = [{"params": list(model.projection.parameters()) + [model.log_temperature], "lr": cfg.learning_rate}]
+    # Regularization: exclude bias and LayerNorm from weight decay
+    no_decay = ["bias", "LayerNorm.weight"]
+    
+    def get_groups(module_name: str, params: Any, lr: float):
+        decay_params = []
+        no_decay_params = []
+        for n, p in params:
+            if not p.requires_grad:
+                continue
+            if any(nd in n for nd in no_decay):
+                no_decay_params.append(p)
+            else:
+                decay_params.append(p)
+        return [
+            {"params": decay_params, "weight_decay": cfg.weight_decay, "lr": lr},
+            {"params": no_decay_params, "weight_decay": 0.0, "lr": lr},
+        ]
+
+    groups = get_groups("projection", model.projection.named_parameters(), cfg.learning_rate)
+    # Add log_temperature to no_decay group of projection
+    groups[1]["params"].append(model.log_temperature)
+    
     if model.encoder.backend == "transformer" and model.encoder.trainable and model.encoder.model is not None:
-        groups.append({"params": [p for p in model.encoder.model.parameters() if p.requires_grad], "lr": cfg.encoder_learning_rate})
-    return groups
+        groups.extend(get_groups("encoder", model.encoder.model.named_parameters(), cfg.encoder_learning_rate))
+    
+    return [g for g in groups if g["params"]]
 
 
 def _episode_loss(model: ProtoNetModel, episode: Dict[str, Any], cfg: ProtonetConfig) -> tuple[torch.Tensor, float]:
@@ -184,7 +207,7 @@ def load_checkpoint(model: ProtoNetModel, checkpoint_path: Path) -> Dict[str, An
 
 def train_model(cfg: ProtonetConfig, episodes_by_split: Dict[str, List[Dict[str, Any]]]) -> TrainingResult:
     model = ProtoNetModel(cfg)
-    optimizer = AdamW(_trainable_parameter_groups(model, cfg), weight_decay=cfg.weight_decay)
+    optimizer = AdamW(_trainable_parameter_groups(model, cfg))
     scaler = GradScaler("cuda", enabled=cfg.use_amp and cfg.device == "cuda")
 
     history: List[Dict[str, Any]] = []
@@ -195,12 +218,22 @@ def train_model(cfg: ProtonetConfig, episodes_by_split: Dict[str, List[Dict[str,
     _warmup_representations(model, cfg, optimizer, train_episodes)
 
     for epoch in range(1, cfg.epochs + 1):
+        announce(f"\n[train] Epoch {epoch}/{cfg.epochs} | Processing {len(train_episodes)} episodes...")
         model.train()
         running_loss = 0.0
         running_acc = 0.0
+        recent_loss: deque[float] = deque(maxlen=20)
+        recent_acc: deque[float] = deque(maxlen=20)
+        optimizer_updates = 0
         optimizer.zero_grad(set_to_none=True)
-        with task_bar(total=len(train_episodes), desc=f"train:{epoch}/{cfg.epochs}", enabled=cfg.progress_enabled) as bar:
+        
+        desc = f"train:{epoch}/{cfg.epochs}"
+        with task_bar(total=len(train_episodes), desc=desc, enabled=cfg.progress_enabled) as bar:
+            # Refresh bar immediately to show it's active even before the first episode finishes
+            bar.set_postfix(status="initializing...")
             for step_index, episode in enumerate(train_episodes, start=1):
+                if step_index == 1:
+                    bar.set_postfix(status="running forward pass...")
                 loss, accuracy = _episode_loss(model, episode, cfg)
                 scaled_loss = loss / max(1, cfg.gradient_accumulation_steps)
                 if scaler.is_enabled():
@@ -214,12 +247,23 @@ def train_model(cfg: ProtonetConfig, episodes_by_split: Dict[str, List[Dict[str,
                         scaler.update()
                     else:
                         optimizer.step()
+                    optimizer_updates += 1
                     optimizer.zero_grad(set_to_none=True)
 
-                running_loss += float(loss.detach().cpu().item())
+                current_loss = float(loss.detach().cpu().item())
+                running_loss += current_loss
                 running_acc += accuracy
+                recent_loss.append(current_loss)
+                recent_acc.append(accuracy)
                 bar.update(1)
-                bar.set_postfix(loss=f"{running_loss / step_index:.3f}", acc=f"{running_acc / step_index:.3f}")
+                bar.set_postfix(
+                    loss=f"{current_loss:.3f}",
+                    avg_loss=f"{running_loss / step_index:.3f}",
+                    avg_acc=f"{running_acc / step_index:.3f}",
+                    recent_loss=f"{sum(recent_loss) / len(recent_loss):.3f}",
+                    recent_acc=f"{sum(recent_acc) / len(recent_acc):.3f}",
+                    updates=optimizer_updates,
+                )
 
         train_metrics = {
             "epoch": epoch,
@@ -234,14 +278,25 @@ def train_model(cfg: ProtonetConfig, episodes_by_split: Dict[str, List[Dict[str,
             }
         )
         history.append(train_metrics)
+        # Summary for researchers to track progress in terminal
+        announce(f"[report] Epoch {epoch} summary: loss={train_metrics['train_loss']:.4f}, acc={train_metrics['train_accuracy']:.4f} | val_acc={val_metrics['accuracy']:.4f}")
+        announce(
+            f"[train] epoch {epoch} complete "
+            f"loss={train_metrics['train_loss']:.3f} "
+            f"acc={train_metrics['train_accuracy']:.3f} "
+            f"val_acc={train_metrics['val_accuracy']:.3f} "
+            f"val_f1={train_metrics['val_macro_f1']:.3f}"
+        )
 
         if val_metrics["accuracy"] > best_val:
             best_val = val_metrics["accuracy"]
             wait = 0
             _save_checkpoint(model, cfg, history, checkpoint_path)
+            announce(f"[train] new best checkpoint val_acc={best_val:.3f}")
         else:
             wait += 1
             if wait >= cfg.patience:
+                announce(f"[train] early stopping at epoch {epoch} (patience={cfg.patience})")
                 break
 
     load_checkpoint(model, checkpoint_path)

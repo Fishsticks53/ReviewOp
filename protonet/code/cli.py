@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 
 try:
-    from .config import INPUT_ROOT, METADATA_ROOT, OUTPUT_ROOT, ProtonetConfig, seed_everything
+    from .config import METADATA_ROOT, OUTPUT_ROOT, ProtonetConfig, resolve_default_input_dir, seed_everything
     from .dataset_reader import load_input_dataset, write_jsonl
     from .episode_builder import build_or_load_episode_sets
     from .evaluator import evaluate_episodes
@@ -14,7 +14,7 @@ try:
     from .reviewlevel_adapter import adapt_reviewlevel_rows
     from .trainer import load_checkpoint, train_model
 except ImportError:
-    from config import INPUT_ROOT, METADATA_ROOT, OUTPUT_ROOT, ProtonetConfig, seed_everything
+    from config import METADATA_ROOT, OUTPUT_ROOT, ProtonetConfig, resolve_default_input_dir, seed_everything
     from dataset_reader import load_input_dataset, write_jsonl
     from episode_builder import build_or_load_episode_sets
     from evaluator import evaluate_episodes
@@ -25,7 +25,7 @@ except ImportError:
 
 
 def _build_config(args: argparse.Namespace) -> ProtonetConfig:
-    input_root = Path(args.input_dir) if args.input_dir else (INPUT_ROOT / args.input_type)
+    input_root = Path(args.input_dir) if args.input_dir else resolve_default_input_dir(args.input_type)
     output_dir = Path(args.output_dir) if args.output_dir else OUTPUT_ROOT
     metadata_dir = Path(args.metadata_dir) if args.metadata_dir else METADATA_ROOT
     return ProtonetConfig(
@@ -55,6 +55,7 @@ def _build_config(args: argparse.Namespace) -> ProtonetConfig:
         strict_encoder=args.strict_encoder,
         production_require_transformer=args.production_require_transformer,
         allow_model_download=args.allow_model_download,
+        compile_model=args.compile_model,
     )
 
 
@@ -178,6 +179,7 @@ def build_parser() -> argparse.ArgumentParser:
     common.add_argument("--strict-encoder", action="store_true")
     common.add_argument("--production-require-transformer", action="store_true")
     common.add_argument("--allow-model-download", action="store_true")
+    common.add_argument("--compile-model", action="store_true")
 
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("train", help="Train, validate, test, and export", parents=[common])

@@ -10,10 +10,19 @@ import torch
 
 
 PROTONET_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = PROTONET_ROOT.parent
 CODE_ROOT = PROTONET_ROOT / "code"
 INPUT_ROOT = PROTONET_ROOT / "input"
 OUTPUT_ROOT = PROTONET_ROOT / "output"
 METADATA_ROOT = PROTONET_ROOT / "metadata"
+COMPAT_INPUT_ROOT = REPO_ROOT / "dataset_builder" / "output" / "compat" / "protonet"
+
+
+def resolve_default_input_dir(input_type: str) -> Path:
+    compat_dir = COMPAT_INPUT_ROOT / input_type
+    if compat_dir.exists():
+        return compat_dir
+    return INPUT_ROOT / input_type
 
 
 @dataclass
@@ -31,7 +40,7 @@ class ProtonetConfig:
     bow_dim: int = 512
     max_length: int = 160
     projection_dim: int = 256
-    dropout: float = 0.1
+    dropout: float = 0.15
     train_encoder: bool = True
 
     n_way: int = 3
@@ -41,15 +50,15 @@ class ProtonetConfig:
     max_eval_episodes: int = 48
 
     warmup_epochs: int = 1
-    epochs: int = 8
-    patience: int = 3
-    learning_rate: float = 1e-3
-    encoder_learning_rate: float = 2e-5
-    weight_decay: float = 1e-4
+    epochs: int = 12
+    patience: int = 4
+    learning_rate: float = 5e-4
+    encoder_learning_rate: float = 1e-5
+    weight_decay: float = 2e-4
     gradient_accumulation_steps: int = 2
     batch_size_hint: int = 1
     use_amp: bool = True
-    contrastive_weight: float = 0.15
+    contrastive_weight: float = 0.3
     prototype_smoothing: float = 0.05
     low_confidence_threshold: float = 0.55
     top_k_debug: int = 3
@@ -61,6 +70,7 @@ class ProtonetConfig:
     strict_encoder: bool = False
     production_require_transformer: bool = False
     allow_model_download: bool = False
+    compile_model: bool = False
 
     joint_label_separator: str = "__"
     min_examples_per_label: int = 4
@@ -79,10 +89,10 @@ class ProtonetConfig:
             path.mkdir(parents=True, exist_ok=True)
 
     @property
-    def device(self) -> str:
+    def device(self) -> torch.device:
         if torch.cuda.is_available():
-            return "cuda"
-        return "cpu"
+            return torch.device("cuda")
+        return torch.device("cpu")
 
     @property
     def progress_enabled(self) -> bool:
@@ -93,7 +103,7 @@ class ProtonetConfig:
         for key, value in list(payload.items()):
             if isinstance(value, Path):
                 payload[key] = str(value)
-        payload["device"] = self.device
+        payload["device"] = str(self.device)
         return payload
 
 

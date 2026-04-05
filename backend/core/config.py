@@ -1,11 +1,14 @@
 import os
+from pathlib import Path
+from typing import ClassVar
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    ROOT: ClassVar[Path] = Path(__file__).resolve().parents[2]
     model_config = SettingsConfigDict(
-        env_file=(".env", "../.env"),
+        env_file=ROOT / ".env",
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
@@ -19,12 +22,13 @@ class Settings(BaseSettings):
     mysql_db: str = Field(default_factory=lambda: os.getenv("MYSQL_DB", ""))
 
     # Seq2Seq
-    seq2seq_model_name: str = "google/flan-t5-small"
+    seq2seq_model_name: str = "google/flan-t5-base"
     seq2seq_max_new_tokens: int = 192
     seq2seq_temperature: float = 0.0
 
     # App
     app_env: str = "dev"
+    version: str = "5.5.0"
     # Hybrid pipeline toggles
     enable_implicit: bool = True
     enable_llm_verifier: bool = True
@@ -52,7 +56,7 @@ class Settings(BaseSettings):
         default_factory=lambda: os.getenv("LLM_MODEL_NAME")
         or os.getenv("GROQ_MODEL")
         or os.getenv("OPENAI_MODEL")
-        or "llama3.1:8b"
+        or "llama-3.1-8b-instant"
     )
     llm_timeout_seconds: int = 60
 
@@ -80,4 +84,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-

@@ -1,164 +1,77 @@
-# ReviewOp
+# ReviewOp (V5.5 Research-Grade)
 
-ReviewOp is a monorepo for aspect-based sentiment analysis workflows across four main areas:
+ReviewOp is a monorepo for aspect-based sentiment analysis with a **Reasoning-Augmented Hybrid** architecture:
 
-- `frontend/`: React + Vite UI for admin analytics and the user review portal.
-- `backend/`: FastAPI + MySQL application for inference, analytics, graph views, jobs, and user flows.
-- `dataset_builder/`: Offline pipeline that converts raw review datasets into normalized review-level and episodic JSONL outputs.
-- `protonet/`: Standalone prototypical network training and export pipeline for few-shot experiments.
+- `backend/`: FastAPI + MySQL APIs for inference, analytics, graph, and user flows
+- `frontend/`: React + Vite UI (Performance-optimized, native fetch)
+- `dataset_builder/`: High-throughput **Symbolic-Neural Synthesis** pipeline (async)
+- `protonet/`: Few-shot Prototypical training/eval/export pipeline
 
-The current repo layout uses the active `protonet/` module for the implicit prototype pipeline.
+## Technical Vision (V5.5)
+
+ReviewOp V5.5 bridges the "Implicit Aspect Gap" by combining the reliability of symbolic matching with the reasoning power of neural models.
+
+1.  **Stage A (Symbolic):** Heuristic keyword grounding to ensure zero-hallucination.
+2.  **Stage B (Neural):** LLM-mediated reasoned recovery for ambiguous or implicit clausal signals.
+
+For more technical depth, see the [Research Overview](SEARCH_OVERVIEW.md).
 
 ## Repo Layout
 
 ```text
 ReviewOp/
 |-- backend/
-|-- dataset_builder/
 |-- frontend/
+|-- dataset_builder/
 |-- protonet/
 |-- run-project.ps1
-`-- run-services.ps1
+|-- run-services.ps1
+`-- RESEARCH_OVERVIEW.md
 ```
 
-## Quick Start
+## Prerequisites
 
-### Automated setup
+- Python `3.10` to `3.13`
+- Node.js `18+`
+- MySQL running locally (or reachable from this machine)
 
-From the repo root:
+## Quick Start (Windows PowerShell)
+
+### 1. One-time setup
 
 ```powershell
+Copy-Item .env.example .env
 .\run-project.ps1
 ```
 
-This script:
+`run-project.ps1` installs backend and frontend dependencies and prepares `backend/venv`.
 
-- checks for Python and Node.js
-- creates `backend/venv` if needed
-- installs backend Python dependencies
-- installs frontend npm dependencies
-- pauses so you can confirm backend database settings
-
-After setup, start both services:
+### 2. Start backend + frontend
 
 ```powershell
 .\run-services.ps1
 ```
 
-### Manual setup
+### 3. Verify
 
-Backend:
-
-```powershell
-cd backend
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-Copy-Item .env.example .env
-python -m uvicorn app:app --host 127.0.0.1 --port 8000
-```
-
-Frontend:
-
-```powershell
-cd frontend
-npm install
-npm run dev
-```
-
-## Configuration
-
-### Backend
-
-The backend reads environment variables from `backend/.env`. Start from `backend/.env.example` and update the MySQL values:
-
-```text
-MYSQL_HOST=127.0.0.1
-MYSQL_PORT=3306
-MYSQL_USER=root
-MYSQL_PASSWORD=your_local_password_here
-MYSQL_DB=protodb
-```
-
-When those credentials are valid, the backend will create the configured database automatically if it does not already exist.
-
-Useful backend defaults:
-
+- Backend health: `http://127.0.0.1:8000/health`
 - API docs: `http://127.0.0.1:8000/docs`
-- Health check: `http://127.0.0.1:8000/health`
-- Default seq2seq model: `google/flan-t5-small`
+- Frontend: URL printed by Vite (usually `http://127.0.0.1:5173`)
 
-Seeded accounts created on startup:
+## Performance & Scaling
 
-- Admin: `admin` / `12345`
-- User: `user` / `12345`
+ReviewOp is designed for large-scale research trials:
 
-### Frontend
+- **Async Pipeline:** Truly parallel LLM calls in the dataset builder.
+- **Vectorized Centroids:** Faster prototypical clustering.
+- **AMP Support:** Automatic Mixed Precision for NVIDIA H100/A100.
 
-The Vite dev server proxies API requests to `http://127.0.0.1:8000` by default. You can override that with:
+## Security & Ethics
 
-- `VITE_PROXY_TARGET`
-- `VITE_API_BASE_URL`
-
-## Data and Model Workflow
-
-### 1. Build datasets
-
-Place raw files in `dataset_builder/input/`, then run:
-
-```powershell
-cd dataset_builder\code
-python build_dataset.py
-```
-
-This writes:
-
-- review-level data to `dataset_builder/output/reviewlevel/`
-- episodic data to `dataset_builder/output/episodic/`
-- quality reports to `dataset_builder/output/reports/`
-
-See `dataset_builder/README.md` for CLI flags and output details.
-
-### 2. Train the ProtoNet pipeline
-
-The ProtoNet module can train from either episodic or review-level JSONL input. For the common episodic flow:
-
-```powershell
-Copy-Item "dataset_builder\output\episodic\*" -Destination "protonet\input\episodic\" -Recurse -Force
-python protonet\code\cli.py train --input-type episodic --force-rebuild-episodes --encoder-backend transformer --production-require-transformer
-```
-
-Training artifacts are written under:
-
-- `protonet/output/`
-- `protonet/metadata/`
-
-See `protonet/README.md` for `train`, `eval`, and `export` commands.
-
-## Current Application Surface
-
-Backend routes currently include:
-
-- `/infer`
-- `/jobs`
-- `/analytics`
-- `/graph`
-- `/user`
-
-The frontend includes:
-
-- admin dashboards and analytics views
-- graph exploration screens
-- user authentication and review submission flows
-- product search and review history pages
+- **No Axios:** Standardized on `httpx` (Python) and `fetch` (JS) for security.
+- **Grounding-First:** Neural models are restricted to preprocessing; decision logic is symbolic and observable.
 
 ## Module Docs
 
 - `dataset_builder/README.md`
 - `protonet/README.md`
-
-## Notes
-
-- Generated datasets, checkpoints, and local artifacts should stay out of version control unless you intentionally want to track them.
-- Some training and inference flows may download model weights the first time they run.
-- Temporary folders may be created by tests under `protonet/`; they are not part of the stable input/output contract.

@@ -1,70 +1,116 @@
 from __future__ import annotations
 
-import csv
 import json
-import shutil
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Tuple
+import xml.etree.ElementTree as ET
+
+import pandas as pd
 
 
-def scan_raw_files(input_dir: Path) -> List[Path]:
-    if not input_dir.exists():
-        return []
-    supported = {".csv", ".json", ".jsonl"}
-    return sorted([p for p in input_dir.rglob("*") if p.is_file() and p.suffix.lower() in supported])
+SUPPORTED_SUFFIXES = {".csv", ".tsv", ".json", ".jsonl", ".xlsx", ".xls", ".xml"}
 
 
-def load_rows(path: Path) -> Tuple[List[Dict[str, Any]], str, List[str]]:
-    suffix = path.suffix.lower()
-    if suffix == ".csv":
-        with path.open("r", encoding="utf-8", errors="replace", newline="") as f:
-            rows = [dict(r) for r in csv.DictReader(f)]
-        cols = list(rows[0].keys()) if rows else []
-        return rows, "csv", cols
-    if suffix == ".jsonl":
-        rows: List[Dict[str, Any]] = []
-        with path.open("r", encoding="utf-8", errors="replace") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                payload = json.loads(line)
-                if isinstance(payload, dict):
-                    rows.append(payload)
-        cols = sorted({k for r in rows for k in r.keys()})
-        return rows, "jsonl", cols
-    payload = json.loads(path.read_text(encoding="utf-8", errors="replace"))
-    if isinstance(payload, list):
-        rows = [r for r in payload if isinstance(r, dict)]
-    elif isinstance(payload, dict):
-        if isinstance(payload.get("data"), list):
-            rows = [r for r in payload["data"] if isinstance(r, dict)]
-        elif isinstance(payload.get("records"), list):
-            rows = [r for r in payload["records"] if isinstance(r, dict)]
+def flatten_dict(payload: dict) -> dict:
+    flat: dict = {}
+    for key, value in payload.items():
+        if isinstance(value, dict):
+            for inner_key, inner_value in value.items():
+                flat[f"{key}_{inner_key}"] = inner_value
         else:
-            rows = [payload]
-    else:
+            flat[key] = value
+    return flat
+
+
+def load_file(path: Path) -> pd.DataFrame:
+    suffix = path.suffix.lower()
+    if suffix in {".csv", ".tsv"}:
+        frame = pd.read_csv(path, sep="\t" if suffix == ".tsv" else None, engine="python")
+    elif suffix in {".xlsx", ".xls"}:
+        frame = pd.read_excel(path)
+    elif suffix == ".json":
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(payload, list):
+            frame = pd.DataFrame([flatten_dict(row) if isinstance(row, dict) else {"value": row} for row in payload])
+        else:
+            frame = pd.DataFrame([flatten_dict(payload if isinstance(payload, dict) else {"value": payload})])
+    elif suffix == ".jsonl":
+        rows = [flatten_dict(json.loads(line)) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        frame = pd.DataFrame(rows)
+    elif suffix == ".xml":
+        root = ET.parse(path).getroot()
         rows = []
-    cols = sorted({k for r in rows for k in r.keys()})
-    return rows, "json", cols
+        for child in list(root):
+            row = {f"attr_{k}": v for k, v in child.attrib.items()}
+            for sub in list(child):
+                row[sub.tag] = (sub.text or "").strip()
+            if not row and (child.text or "").strip():
+                row[child.tag] = (child.text or "").strip()
+            rows.append(row)
+        frame = pd.DataFrame(rows)
+    else:
+        raise ValueError(f"Unsupported input file: {path}")
+    if not frame.empty:
+        frame = frame.copy()
+        frame["source_file"] = path.name
+    return frame
 
 
-def ensure_output_dirs(output_dir: Path) -> None:
-    for path in [
-        output_dir / "reviewlevel",
-        output_dir / "episodic",
-        output_dir / "reports"
-    ]:
-        path.mkdir(parents=True, exist_ok=True)
+_REVIEW_COLUMN_ALIASES = [
+    "ReviewText", "review_text", "text", "Text", "text_",
+    "comment", "Comment", "body", "Body",
+    "content", "Content", "review_body", "ReviewBody",
+]
 
 
-def clean_previous_outputs(output_dir: Path) -> None:
-    if output_dir.exists():
-        shutil.rmtree(output_dir)
+def _normalize_review_columns(frame: pd.DataFrame) -> pd.DataFrame:
+    if "review" in frame.columns:
+        return frame
+    for alias in _REVIEW_COLUMN_ALIASES:
+        if alias in frame.columns:
+            # Keep source schema intact for text_column_override compatibility.
+            frame = frame.copy()
+            frame["review"] = frame[alias]
+            return frame
+    return frame
 
 
-def write_jsonl(path: Path, rows: Iterable[Dict[str, Any]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as f:
-        for row in rows:
-            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+def load_inputs(input_dir: Path) -> pd.DataFrame:
+    frames = []
+    if not input_dir.exists():
+        return pd.DataFrame()
+    for path in sorted(input_dir.iterdir()):
+        if path.is_file() and path.suffix.lower() in SUPPORTED_SUFFIXES:
+            frame = load_file(path)
+            if not frame.empty:
+                frame = _normalize_review_columns(frame)
+                frames.append(frame)
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, ignore_index=True, sort=False)
+
+
+def load_gold_annotations(path: Path) -> list[dict]:
+    if not path.exists():
+        return []
+    suffix = path.suffix.lower()
+    if suffix not in {".jsonl", ".json"}:
+        raise ValueError(f"Unsupported gold annotation file type: {path}")
+    if suffix == ".jsonl":
+        rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    else:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        rows = payload if isinstance(payload, list) else [payload]
+    cleaned: list[dict] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        labels = row.get("gold_labels")
+        cleaned.append({
+            "record_id": row.get("record_id"),
+            "domain": row.get("domain"),
+            "text": row.get("text"),
+            "gold_labels": labels if isinstance(labels, list) else [],
+            "annotator_id": row.get("annotator_id"),
+            "review_status": row.get("review_status", "pending"),
+        })
+    return cleaned
