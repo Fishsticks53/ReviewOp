@@ -28,7 +28,7 @@ protonet/output/*
 protonet/metadata/*
 !protonet/metadata/.gitkeep
 protonet/_tmp*/
-protonet/zip
+dataset_builder/zip/
 # Ignore all JSONL data artifacts globally
 *.jsonl
 
@@ -37,3 +37,4 @@ backend/models/implicit/*.json
 backend/models/implicit/checkpoints/*.pt
 datasets/
 agent_docs/
+CLAUDE.md
