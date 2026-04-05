@@ -35,6 +35,7 @@ dataset_builder/zip/
 # Model/checkpoint artifacts
 backend/models/implicit/*.json
 backend/models/implicit/checkpoints/*.pt
-datasets/
+CLAUDE.md 
 agent_docs/
-CLAUDE.md
+dataset_builder/zip
+datasets/
