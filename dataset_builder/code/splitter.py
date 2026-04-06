@@ -95,40 +95,32 @@ def grouped_split(
         grp = groups[0]
         return by_group[grp], [], []
 
-    train_groups, holdout_groups = train_test_split(
-        groups,
-        train_size=train_ratio,
-        random_state=random_seed,
-        shuffle=True,
-    )
-    holdout_ratio = val_ratio / max(val_ratio + test_ratio, 1e-9)
-    if not holdout_groups:
-        holdout_groups = []
+    total_groups = len(groups)
     
-    if len(holdout_groups) == 0 and len(groups) > 1 and test_ratio > 0:
-        # Emergency fallback: if we have groups but holdout is empty, 
-        # steal one group from train for test if possible.
-        if len(train_groups) > 1:
-            test_groups = [train_groups.pop()]
-            val_groups = [] # Still might be empty if only 2 groups total
-        else:
-            val_groups = []
-            test_groups = []
-    elif len(holdout_groups) == 1:
-        # Priority: test > val for research benchmarks
-        if test_ratio > 0:
-            test_groups = holdout_groups
-            val_groups = []
-        else:
-            val_groups = holdout_groups
-            test_groups = []
-    else:
-        val_groups, test_groups = train_test_split(
-            holdout_groups,
-            test_size=test_ratio / max(val_ratio + test_ratio, 1e-9),
-            random_state=random_seed + 1,
-            shuffle=True,
-        )
+    # Calculate target counts
+    n_train = max(1, int(round(total_groups * train_ratio)))
+    n_val = max(1, int(round(total_groups * val_ratio))) if val_ratio > 0 else 0
+    n_test = max(1, int(round(total_groups * test_ratio))) if test_ratio > 0 else 0
+    
+    # Adjust to fit total_groups
+    while (n_train + n_val + n_test) > total_groups and n_train > 1:
+        n_train -= 1
+    while (n_train + n_val + n_test) > total_groups and n_val > 0:
+        n_val -= 1
+    while (n_train + n_val + n_test) > total_groups and n_test > 0:
+        n_test -= 1
+        
+    # If still over (only happens if total_groups is very small), force fit
+    if (n_train + n_val + n_test) > total_groups:
+        if n_test > 0: n_test = max(1, total_groups - n_train - n_val)
+        if (n_train + n_val + n_test) > total_groups:
+            if n_val > 0: n_val = max(0, total_groups - n_train - n_test)
+
+    # Perform the split using counts rather than ratios to guarantee non-empty sets
+    rand = pd.Series(groups).sample(frac=1, random_state=random_seed).tolist()
+    train_groups = rand[:n_train]
+    val_groups = rand[n_train:n_train + n_val]
+    test_groups = rand[n_train + n_val:]
     train = [row for group in train_groups for row in by_group[group]]
     val = [row for group in val_groups for row in by_group[group]]
     test = [row for group in test_groups for row in by_group[group]]

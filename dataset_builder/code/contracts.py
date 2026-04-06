@@ -143,11 +143,13 @@ class ReviewRecord:
 
 @dataclass
 class GoldInterpretation:
-    aspect_label: str
+    aspect: str
     sentiment: str
-    evidence_text: str
+    evidence: str
     annotator_support: int = 1
     evidence_span: tuple[int, int] | None = None
+    conformal_set: list[str] = field(default_factory=list)
+    label_source: str = "hybrid"
 
 
 @dataclass

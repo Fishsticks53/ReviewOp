@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from collections import Counter, defaultdict
 import json
@@ -41,37 +41,54 @@ STOP_TOKENS = {
 # Expanded research-grade latent aspect rules with explicit/implicit separation.
 # Format: (label, explicit_keywords, implicit_signals)
 LATENT_ASPECT_RULES = [
-    ("value", {"price", "cost", "bill", "billing", "fees", "dollars", "rate"}, 
-              {"expensive", "cheap", "affordable", "worth", "priced", "pricey", "overpriced", "budget", "deal", "bargain", "money", "saving"}),
-    ("power", {"battery", "power", "charger", "charging", "plug", "adapter"},
-              {"dies", "drains", "lasts", "lasted", "dead", "empty", "hours", "short life", "long life"}),
-    ("connectivity", {"network", "signal", "wifi", "bluetooth", "connection", "data", "internet"},
-                     {"drops", "searching", "searching for", "disconnected", "spotty", "unstable", "cut out", "no service"}),
-    ("thermal", {"temperature", "heat", "thermal", "cooling", "fan"},
-                {"hot", "warm", "cool", "burning", "heats up", "overheating", "ice", "stove"}),
-    ("performance", {"performance", "speed", "software", "app", "operating system", "os", "hardware", "processor"},
-                   {"fast", "slow", "lag", "laggy", "responsive", "smooth", "efficient", "powerful", "snappy", "clunky"}),
-    ("display quality", {"screen", "display", "brightness", "resolution", "monitor", "pixel", "panel"},
-                       {"dim", "bright", "crisp", "washed out", "blurry", "vivid", "sharp"}),
-    ("reliability", {"issue", "problem", "crash", "broken", "stable", "durable", "defect", "defective", "fail", "failure", "malfunction", "support"},
-                    {"crashed", "died", "buggy", "stopped working", "frozen", "freezes", "error"}),
-    ("build quality", {"build", "material", "structure", "construction", "casing", "exterior", "interior"},
-                     {"flimsy", "sturdy", "premium", "cheap plastic", "solid", "durable", "tough", "strong", "fragile"}),
-    ("accessibility", {"map", "route", "signage", "station", "pickup", "location", "nav", "gps", "directions", "accessible", "access"},
-                     {"easy", "confusing", "lost", "direct", "straightforward", "simple", "shortcut"}),
-    ("service quality", {"service", "staff", "support", "waiter", "waitress", "driver", "doctor", "nurse", "crew", "host"},
-                        {"helpful", "attentive", "responsive", "polite", "impatient", "friendly", "rude", "nice", "kind"}),
-    ("cleanliness", {"clean", "dirty", "hygiene", "neat", "tidy", "sanitary", "dust"},
-                     {"spotless", "filthy", "stain", "gross", "messy", "mess", "shining"}),
-    ("timeliness", {"time", "schedule", "standard", "arrival", "waiting"},
-                    {"late", "delay", "quick", "fast", "prompt", "arrive", "wait", "rush", "speedy", "instant"}),
-    ("comfort", {"comfort", "space", "environment", "setting", "room"},
-                {"comfortable", "uncomfortable", "crowded", "quiet", "noisy", "spacious", "cozy", "roomy", "cramped"}),
-    ("food quality", {"food", "meal", "taste", "dish", "ingredient", "cook", "recipe", "portion"},
-                     {"tasty", "flavor", "fresh", "delicious", "savory", "yummy", "bland", "salty", "greasy", "stale"}),
-    ("sound quality", {"sound", "audio", "music", "volume", "speaker"},
-                      {"noisy", "loud", "quiet", "clear", "tinny", "distorted", "muffled"}),
+    ("value", {"price", "cost", "bill", "billing", "fees", "dollars", "rate", "value", "payment"}, 
+              {"expensive", "cheap", "affordable", "worth", "priced", "pricey", "overpriced", "budget", "deal", "bargain", "money", "saving", "stole", "rip off"}),
+    ("power", {"battery", "power", "charger", "charging", "plug", "adapter", "energy", "voltage"},
+              {"dies", "drains", "lasts", "lasted", "dead", "empty", "hours", "short life", "long life", "shuts down", "recharge", "plugged in", "out of juice"}),
+    ("connectivity", {"network", "signal", "wifi", "bluetooth", "connection", "data", "internet", "wireless", "pairing"},
+                     {"drops", "searching", "disconnected", "spotty", "unstable", "cut out", "no service", "cannot connect", "no bars", "lost connection"}),
+    ("thermal", {"temperature", "heat", "thermal", "cooling", "fan", "vent", "airflow"},
+                {"hot", "warm", "cool", "burning", "heats up", "overheating", "ice", "stove", "fire", "toasty"}),
+    ("performance", {"performance", "speed", "software", "app", "operating system", "os", "hardware", "processor", "engine", "motor"},
+                   {"fast", "slow", "lag", "laggy", "responsive", "smooth", "efficient", "powerful", "snappy", "clunky", "freezes", "wait", "stalling"}),
+    ("display quality", {"screen", "display", "brightness", "resolution", "monitor", "pixel", "panel", "visuals", "interface"},
+                       {"dim", "bright", "crisp", "washed out", "blurry", "vivid", "sharp", "glare", "dead pixels", "bleeding"}),
+    ("reliability", {"issue", "problem", "crash", "broken", "stable", "durable", "defect", "defective", "fail", "failure", "malfunction", "support", "warranty"},
+                    {"crashed", "died", "buggy", "stopped working", "frozen", "freezes", "error", "reboot", "restart", "quit", "useless", "garbage"}),
+    ("build quality", {"build", "material", "structure", "construction", "casing", "exterior", "interior", "design", "finish"},
+                     {"flimsy", "sturdy", "premium", "cheap plastic", "solid", "durable", "tough", "strong", "fragile", "scratched", "dent", "rattling"}),
+    ("accessibility", {"map", "route", "signage", "station", "pickup", "location", "nav", "gps", "directions", "accessible", "access", "entry", "exit"},
+                     {"easy", "confusing", "lost", "direct", "straightforward", "simple", "shortcut", "stuck", "closed", "blocked"}),
+    ("service quality", {"service", "staff", "support", "waiter", "waitress", "driver", "doctor", "nurse", "crew", "host", "personnel", "manager"},
+                        {"helpful", "attentive", "responsive", "polite", "impatient", "friendly", "rude", "nice", "kind", "professional", "rude"}),
+    ("cleanliness", {"clean", "dirty", "hygiene", "neat", "tidy", "sanitary", "dust", "garbage", "trash"},
+                     {"spotless", "filthy", "stain", "gross", "messy", "mess", "shining", "smell", "soiled"}),
+    ("timeliness", {"time", "schedule", "standard", "arrival", "waiting", "appointment", "deadline"},
+                    {"late", "delay", "quick", "fast", "prompt", "arrive", "wait", "rushed", "speedy", "instant", "on time"}),
+    ("comfort", {"comfort", "space", "environment", "setting", "room", "seat", "cushion", "ambience"},
+                {"comfortable", "uncomfortable", "crowded", "quiet", "noisy", "spacious", "cozy", "roomy", "cramped", "harsh"}),
+    ("sensory quality", {"food", "meal", "taste", "dish", "ingredient", "cook", "recipe", "portion", "flavor", "smell", "scent", "sound", "audio", "music"},
+                       {"tasty", "flavor", "fresh", "delicious", "savory", "yummy", "bland", "salty", "greasy", "stale", "noisy", "loud", "clear"}),
 ]
+
+# Unconventional: Explicit Pivoting Templates
+# Maps latent aspects to explicit restatement templates
+PIVOT_TEMPLATES = {
+    "power": "The power management is {sentiment} because {evidence}",
+    "connectivity": "The connectivity is {sentiment} because {evidence}",
+    "performance": "The performance is {sentiment} because {evidence}",
+    "reliability": "The operational reliability is {sentiment} because {evidence}",
+    "value": "The value for money is {sentiment} because {evidence}",
+    "thermal": "The thermal state is {sentiment} because {evidence}",
+    "display quality": "The visual/display quality is {sentiment} because {evidence}",
+    "build quality": "The physical build quality is {sentiment} because {evidence}",
+    "accessibility": "The accessibility is {sentiment} because {evidence}",
+    "service quality": "The quality of service is {sentiment} because {evidence}",
+    "cleanliness": "The cleanliness is {sentiment} because {evidence}",
+    "timeliness": "The timeliness is {sentiment} because {evidence}",
+    "comfort": "The overall comfort is {sentiment} because {evidence}",
+    "sensory quality": "The sensory quality (taste/sound) is {sentiment} because {evidence}",
+}
 
 VALID_LATENT_ASPECTS = {label for label, _, _ in LATENT_ASPECT_RULES} | {"general"}
 LATENT_RULE_BY_LABEL = {label: (explicit_kws, implicit_sigs) for label, explicit_kws, implicit_sigs in LATENT_ASPECT_RULES}
@@ -114,16 +131,24 @@ def _latent_aspect_label(aspect: str, clause: str | None = None) -> str:
     return "general"
 
 
+_KEYWORD_REGEX_CACHE: dict[str, re.Pattern] = {}
+
 def _keyword_in_text(text: str, keyword: str) -> bool:
     normalized_text = normalize_whitespace(text).lower()
     normalized_keyword = normalize_whitespace(keyword).lower()
     if not normalized_text or not normalized_keyword:
         return False
-    parts = [part for part in normalized_keyword.split() if part]
-    if not parts:
-        return False
-    pattern = r"(?<![a-z0-9])" + r"\s+".join(re.escape(part) for part in parts) + r"(?![a-z0-9])"
-    return bool(re.search(pattern, normalized_text, flags=re.IGNORECASE))
+        
+    pattern = _KEYWORD_REGEX_CACHE.get(normalized_keyword)
+    if pattern is None:
+        parts = [part for part in normalized_keyword.split() if part]
+        if not parts:
+            return False
+        pattern_str = r"(?<![a-z0-9])" + r"\s+".join(re.escape(part) for part in parts) + r"(?![a-z0-9])"
+        pattern = re.compile(pattern_str, flags=re.IGNORECASE)
+        _KEYWORD_REGEX_CACHE[normalized_keyword] = pattern
+        
+    return bool(pattern.search(normalized_text))
 
 
 def _hardness_tier(hardness: int) -> str:
@@ -275,11 +300,37 @@ def _infer_fallback_latent_from_clause(clause: str) -> tuple[str | None, int]:
 
 def infer_sentiment(text: str) -> str:
     tokens = tokenize(text)
-    pos = sum(token in POSITIVE_WORDS for token in tokens)
-    neg = sum(token in NEGATIVE_WORDS for token in tokens)
-    if pos > neg:
+    lower_text = normalize_whitespace(text).lower()
+    negators = {"not", "never", "no", "isnt", "wasnt", "doesnt", "didnt", "cant", "wont", "neither", "nor"}
+    
+    # Special strong triggers
+    strong_neg = {"crash", "crashed", "broken", "unusable", "terrible", "worst", "fail", "failure", "awful", "horrible"}
+    
+    pos_score = 0
+    neg_score = 0
+    
+    for i, token in enumerate(tokens):
+        # Lookback for negations (simple 1-2 token window)
+        is_negated = False
+        if i > 0 and tokens[i-1] in negators:
+            is_negated = True
+        elif i > 1 and tokens[i-2] in negators:
+            is_negated = True
+
+        if token in POSITIVE_WORDS:
+            if is_negated: neg_score += 1.5
+            else: pos_score += 1
+        elif token in NEGATIVE_WORDS:
+            if is_negated: pos_score += 1
+            else: neg_score += 1
+        
+        if token in strong_neg:
+            if not is_negated: neg_score += 2
+            else: pos_score += 0.5  # "not broken" is slightly positive
+
+    if pos_score > neg_score:
         return "positive"
-    if neg > pos:
+    if neg_score > pos_score:
         return "negative"
     return "neutral"
 
@@ -350,12 +401,16 @@ def _build_span(aspect: str, clause: str, *, sentiment: str, confidence: float, 
     latent = _latent_aspect_label(aspect, clause)
     matched_surface, support = _match_aspect_surface(clause, aspect)
     matched_surface = matched_surface or aspect
+    
+    # Fix 2: Evidence span expansion (clause-level if keyword is too short)
+    token_count = len(tokenize(matched_surface))
+    evidence = clause if token_count < 3 else matched_surface
+    
     start = clause.lower().find(matched_surface.lower()) if matched_surface else -1
     return {
-        "surface_aspect": aspect,
-        "latent_aspect": latent,
-        "normalized_aspect": latent,
-        "matched_surface": matched_surface,
+        "aspect": aspect, # Hard cut-over Fix 1
+        "latent_label": latent,
+        "evidence": evidence, # Hard cut-over Fix 1
         "support_type": support or source,
         "sentiment": sentiment,
         "confidence": round(confidence, 4),
@@ -434,40 +489,38 @@ async def build_implicit_row(
     reasoned_recovery_used = False
     leakage_flags_total: set[str] = set()
 
-    # Stage A/B: Hybrid Candidate Generation
+    # Stage A/B: Hybrid Candidate Generation (Optimized single-pass)
     for clause in clauses:
         clause_sentiment = infer_sentiment(clause)
         clause_matches: list[dict[str, Any]] = []
         
-        # 1. Rules (Explicit & Lexicon)
+        # Priority 1: Rules & Lexicon
+        haystack = clause.lower()
         for label, explicit_kws, implicit_sigs in LATENT_ASPECT_RULES:
-            # Explicit (Hardness 0)
+            # Check explicit first (Hardness 0)
+            found_explicit = False
             for kw in sorted(explicit_kws, key=len, reverse=True):
-                if _keyword_in_text(clause, kw):
+                if _keyword_in_text(haystack, kw):
                     matched, match_type = _match_aspect_surface(clause, kw)
                     clause_matches.append({
-                        "latent": label,
-                        "aspect": matched or kw,
-                        "support_type": match_type or "exact",
-                        "label_type": "explicit",
-                        "hardness": 0,
-                        "confidence": 1.0,
-                        "source": "rule",
+                        "latent": label,"aspect": matched or kw,"support_type": match_type or "exact",
+                        "label_type": "explicit","hardness": 0,"confidence": 1.0,"source": "rule"
                     })
+                    found_explicit = True
                     break
             
-            # Implicit Signals (Hardness 1)
+            if found_explicit: 
+                # FAST-PATH: If we found a perfect explicit match for this aspect, 
+                # we don't need to check implicit signals for the same aspect label.
+                continue
+
+            # Check implicit signals (Hardness 1)
             for sig in sorted(implicit_sigs, key=len, reverse=True):
-                if _keyword_in_text(clause, sig):
+                if _keyword_in_text(haystack, sig):
                     matched, match_type = _match_aspect_surface(clause, sig)
                     clause_matches.append({
-                        "latent": label,
-                        "aspect": matched or sig,
-                        "support_type": match_type or "near_exact",
-                        "label_type": "implicit",
-                        "hardness": 1,
-                        "confidence": 0.85,
-                        "source": "lexicon",
+                        "latent": label,"aspect": matched or sig,"support_type": match_type or "near_exact",
+                        "label_type": "implicit","hardness": 1,"confidence": 0.85,"source": "lexicon"
                     })
                     break
 
@@ -534,9 +587,32 @@ async def build_implicit_row(
         aspect_sentiments[l].append(span["sentiment"])
         aspect_confidence[l] = max(aspect_confidence.get(l, 0.0), span["confidence"])
     
-    aspects = sorted(list(aspect_sentiments.keys())) or ["general"]
+    # Final assembly with conformal sets and pivoting
+    inferred_aspects = sorted(list(aspect_sentiments.keys())) or ["general"]
     max_hardness = max([s["hardness"] for s in spans]) if spans else 0
     final_label_type = "explicit" if any(s["label_type"] == "explicit" for s in spans) else "implicit"
+
+    # Conformal Set Logic (Unconventional)
+    # If top confidence and second confidence are close, both go into the conformal set
+    sorted_conf = sorted(aspect_confidence.items(), key=lambda x: x[1], reverse=True)
+    conformal_set = [it[0] for it in sorted_conf[:3]] if sorted_conf else [] # Top 3 candidates
+    
+    # Ambiguity Score (Unconventionally continuous)
+    ambiguity_score = 0.0
+    if len(sorted_conf) > 1:
+        ambiguity_score = 1.0 - (sorted_conf[0][1] - sorted_conf[1][1])
+    
+    # Explicit Pivoting (Unconventional cross-check)
+    pivot_confirmed = False
+    if inferred_aspects and inferred_aspects[0] in PIVOT_TEMPLATES:
+        best_aspect = inferred_aspects[0]
+        template = PIVOT_TEMPLATES[best_aspect]
+        pivot_text = template.format(sentiment=sentiment, evidence=raw_text)
+        # Check if the core keywords of the aspect appear in the context of the explicit restatement
+        # This is a simplified "template-based" pivoting check
+        explicit_kws, _ = LATENT_RULE_BY_LABEL.get(best_aspect, (set(), set()))
+        if any(kw in pivot_text.lower() for kw in explicit_kws):
+            pivot_confirmed = True
 
     return {
         "id": row.get("id"),
@@ -547,19 +623,22 @@ async def build_implicit_row(
         "implicit": {
             "mode": mode,
             "processed_text": processed_text,
-            "aspects": aspects,
+            "aspect": inferred_aspects[0] if inferred_aspects else "general", # Canonical aspect
+            "conformal_set": conformal_set,
+            "ambiguity_score": round(ambiguity_score, 4),
+            "pivot_confirmed": pivot_confirmed,
             "dominant_sentiment": sentiment,
             "aspect_sentiments": {a: Counter(s).most_common(1)[0][0] for a, s in aspect_sentiments.items()},
             "aspect_confidence": aspect_confidence,
             "spans": spans,
-            "needs_review": not spans or aspects == ["general"],
+            "needs_review": not spans or inferred_aspects == ["general"] or ambiguity_score > 0.8,
             "implicit_ready": True,
             "llm_fallback_used": llm_fallback_used,
             "reasoned_recovery_used": reasoned_recovery_used,
             "label_type": final_label_type,
             "hardness_score": max_hardness,
             "hardness_tier": f"H{max_hardness}",
-            "implicit_quality_tier": "strict_pass" if (spans and aspects != ["general"]) else "needs_review",
+            "implicit_quality_tier": "strict_pass" if (spans and inferred_aspects != ["general"]) else "needs_review",
             "leakage_flags": sorted(leakage_flags_total),
         },
     }

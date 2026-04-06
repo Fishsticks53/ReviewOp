@@ -34,7 +34,8 @@ def load_file(path: Path) -> pd.DataFrame:
         else:
             frame = pd.DataFrame([flatten_dict(payload if isinstance(payload, dict) else {"value": payload})])
     elif suffix == ".jsonl":
-        rows = [flatten_dict(json.loads(line)) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        with path.open("r", encoding="utf-8") as f:
+            rows = [flatten_dict(json.loads(line)) for line in f if line.strip()]
         frame = pd.DataFrame(rows)
     elif suffix == ".xml":
         root = ET.parse(path).getroot()
@@ -96,7 +97,8 @@ def load_gold_annotations(path: Path) -> list[dict]:
     if suffix not in {".jsonl", ".json"}:
         raise ValueError(f"Unsupported gold annotation file type: {path}")
     if suffix == ".jsonl":
-        rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        with path.open("r", encoding="utf-8") as f:
+            rows = [json.loads(line) for line in f if line.strip()]
     else:
         payload = json.loads(path.read_text(encoding="utf-8"))
         rows = payload if isinstance(payload, list) else [payload]

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import argparse
 from collections import Counter, defaultdict
@@ -13,6 +13,7 @@ from typing import Any
 from dotenv import load_dotenv
 import pandas as pd
 from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor
 
 from contracts import BuilderConfig
 from coref import heuristic_coref
@@ -76,14 +77,16 @@ class _ProgressTracker:
 
 
 def _assign_ids(frame: pd.DataFrame) -> pd.DataFrame:
-    # Optimized: Use vectorized operations where possible, or faster row iteration
+    # Optimized: Vectorized ID generation where possible
     out = frame.copy()
-    # Create a deterministic ID using source_file and a hash of the content (stable_id)
-    # We still use a comprehension but we avoid to_json if possible by using a tuple of keys
-    out["id"] = [
-        stable_id(row.get("source_file", "source"), idx, str(tuple(row.values())))
-        for idx, row in enumerate(out.to_dict(orient="records"))
-    ]
+    if "source_file" not in out.columns:
+        out["source_file"] = "unknown"
+    
+    # We use a helper to avoid per-row to_dict conversion
+    def get_row_id(row_tuple):
+        return stable_id(row_tuple.source_file, row_tuple.Index, str(row_tuple))
+
+    out["id"] = [get_row_id(row) for row in out.itertuples()]
     return out
 
 
@@ -304,15 +307,16 @@ def _build_gold_interpretations(row: dict[str, Any]) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
         for item in from_labels:
             if not isinstance(item, dict): continue
-            aspect = str(item.get("aspect_label") or item.get("aspect") or "").strip()
+            aspect = str(item.get("aspect") or item.get("aspect_label") or "").strip()
             if not aspect: continue
             out.append({
-                "aspect_label": aspect,
+                "aspect": aspect,
                 "sentiment": str(item.get("sentiment") or "neutral").lower(),
-                "evidence_text": str(item.get("evidence_text") or item.get("evidence") or "").strip(),
+                "evidence": str(item.get("evidence") or item.get("evidence_text") or "").strip(),
                 "annotator_support": int(item.get("annotator_support", 1) or 1),
                 "source": str(item.get("source") or "synthetic"),
                 "label_type": str(item.get("label_type") or "implicit"),
+                "conformal_set": item.get("conformal_set", [aspect]),
             })
         if out: return out
 
@@ -1561,24 +1565,26 @@ def _prepare_rows(frame: pd.DataFrame, cfg: BuilderConfig, text_column: str, pro
 
 def _build_labels_for_export(row: dict[str, Any]) -> list[dict[str, Any]]:
     implicit = row.get("implicit", {}) or {}
-    aspects = [str(aspect) for aspect in implicit.get("aspects", []) if str(aspect) and str(aspect) != "general"]
+    # Use canonical aspect
+    aspect = str(implicit.get("aspect") or "general")
+    if not aspect or aspect == "general":
+        return []
+        
     labels: list[dict[str, Any]] = []
-    for aspect in aspects:
-        evidence_text, evidence_span, fallback_used = _evidence_for_aspect(row, aspect)
-        labels.append(
-            {
-                "aspect": aspect,
-                "implicit_aspect": aspect,
-                "sentiment": str(implicit.get("aspect_sentiments", {}).get(aspect, implicit.get("dominant_sentiment", "neutral"))).lower(),
-                "confidence": float(implicit.get("aspect_confidence", {}).get(aspect, 0.5)),
-                "evidence_sentence": evidence_text,
-                "evidence_text": evidence_text,
-                "evidence_span": evidence_span,
-                "evidence_fallback_used": fallback_used,
-                "type": str(implicit.get("label_type") or "implicit"),
-                "ambiguity_provenance": "gold_multi" if len(_build_gold_interpretations(row)) > 1 else "single",
-            }
-        )
+    # Every label now includes the core canonical fields + unconventional metadata
+    evidence_text, _, fallback_used = _evidence_for_aspect(row, aspect)
+    labels.append(
+        {
+            "aspect": aspect,
+            "sentiment": str(implicit.get("aspect_sentiments", {}).get(aspect, implicit.get("dominant_sentiment", "neutral"))).lower(),
+            "confidence": float(implicit.get("aspect_confidence", {}).get(aspect, 0.5)),
+            "evidence": evidence_text, # Hard cut-over Fix 1
+            "conformal_set": implicit.get("conformal_set", [aspect]),
+            "ambiguity_score": float(implicit.get("ambiguity_score", 0.0)),
+            "pivot_confirmed": bool(implicit.get("pivot_confirmed", False)),
+            "type": str(implicit.get("label_type") or "implicit"),
+        }
+    )
     return labels
 
 
@@ -1587,6 +1593,9 @@ def _to_model_export_row(row: dict[str, Any]) -> dict[str, Any]:
     out["review_text"] = str(row.get("source_text") or row.get("review_text") or "")
     out["labels"] = _build_labels_for_export(row)
     out["group_id"] = _group_identity(row)
+    # Active Learning Hook: Tag high priority review if ambiguous
+    implicit = row.get("implicit", {}) or {}
+    out["review_priority"] = "high" if float(implicit.get("ambiguity_score", 0.0)) > 0.7 else "standard"
     return out
 
 
@@ -1656,12 +1665,13 @@ def _build_benchmark_instances(
             spans = implicit.get("spans") or []
             for span in spans:
                 gold_interpretations.append({
-                    "aspect_label": str(span.get("latent_label") or span.get("aspect") or ""),
+                    "aspect": str(span.get("latent_label") or span.get("aspect") or ""),
                     "sentiment": str(span.get("sentiment") or "neutral"),
-                    "evidence_text": str(span.get("aspect") or ""), # The span surface itself
+                    "evidence": str(span.get("aspect") or ""), # The span surface itself
                     "annotator_support": 1,
                     "source": str(span.get("source") or "rule"),
                     "label_type": str(span.get("label_type") or "implicit"),
+                    "conformal_set": implicit.get("conformal_set", [str(span.get("aspect") or "")]),
                 })
 
         benchmark_row = {
@@ -1865,13 +1875,27 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
     candidate_aspects_by_domain: dict[str, list[str]] = {}
     
     progress.step("domain discovery")
-    for language in sorted({str(row.get("language", "unknown")) for row in train_rows}):
-        language_rows = [row for row in train_rows if str(row.get("language", "unknown")) == language]
-        candidate_aspects_by_language[language] = discover_aspects(language_rows, text_column=text_column, max_aspects=cfg.max_aspects, implicit_mode=cfg.implicit_mode)
+    progress.step("domain/language discovery (parallel)", 0)
     
-    for domain in sorted({str(_canonical_domain(str(row.get("source_file", "unknown")))) for row in train_rows}):
-        domain_rows = [row for row in train_rows if _canonical_domain(str(row.get("source_file", "unknown"))) == domain]
-        candidate_aspects_by_domain[domain] = discover_aspects(domain_rows, text_column=text_column, max_aspects=cfg.max_aspects, implicit_mode=cfg.implicit_mode)
+    languages = sorted({str(row.get("language", "unknown")) for row in train_rows})
+    domains = sorted({str(_canonical_domain(str(row.get("source_file", "unknown")))) for row in train_rows})
+    
+    with ThreadPoolExecutor(max_workers=min(cfg.max_workers, 16)) as executor:
+        # Parallelize Aspects by Language
+        lang_tasks = {
+            lang: executor.submit(discover_aspects, [row for row in train_rows if str(row.get("language", "unknown")) == lang], 
+                                  text_column=text_column, max_aspects=cfg.max_aspects, implicit_mode=cfg.implicit_mode)
+            for lang in languages
+        }
+        # Parallelize Aspects by Domain
+        domain_tasks = {
+            dom: executor.submit(discover_aspects, [row for row in train_rows if _canonical_domain(str(row.get("source_file", "unknown"))) == dom], 
+                                 text_column=text_column, max_aspects=cfg.max_aspects, implicit_mode=cfg.implicit_mode)
+            for dom in domains
+        }
+        
+        candidate_aspects_by_language = {lang: task.result() for lang, task in lang_tasks.items()}
+        candidate_aspects_by_domain = {dom: task.result() for dom, task in domain_tasks.items()}
 
     feature_numeric_columns = _feature_columns(schema.numeric_columns, text_column=text_column, target_column=schema.target_column)
     feature_categorical_columns = _feature_columns(schema.categorical_columns, text_column=text_column, target_column=schema.target_column)
@@ -1879,43 +1903,46 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
 
     async def build_split(rows: list[dict[str, Any]], split_name: str, domain_conditioning_mode: str) -> list[dict[str, Any]]:
         import asyncio
-        if not rows:
-            return []
+        if not rows: return []
         
-        progress.step(f"building {split_name} (async)", 0)
+        sem = asyncio.Semaphore(cfg.max_workers)
+        results = [None] * len(rows)
         
-        async def _run_batch(items):
-            tasks = [
-                _process_row(
-                    item,
-                    split_name=split_name,
-                    text_column=text_column,
-                    artifacts=artifacts,
-                    feature_numeric_columns=feature_numeric_columns,
-                    feature_categorical_columns=feature_categorical_columns,
-                    schema=schema,
-                    cfg=cfg,
-                    candidate_aspects=candidate_aspects,
-                    candidate_aspects_by_language=candidate_aspects_by_language,
-                    candidate_aspect_domain=candidate_aspects_by_domain if domain_conditioning_mode != "off" else {},
-                    train_domain_support=dict(train_domain_support),
-                    domain_conditioning_mode=domain_conditioning_mode,
-                    llm_provider=llm_provider
-                )
-                for item in items
-            ]
-            return await asyncio.gather(*tasks)
+        async def _bounded_process(idx, row, pbar):
+            async with sem:
+                try:
+                    res = await _process_row(
+                        (idx, row),
+                        split_name=split_name,
+                        text_column=text_column,
+                        artifacts=artifacts,
+                        feature_numeric_columns=feature_numeric_columns,
+                        feature_categorical_columns=feature_categorical_columns,
+                        schema=schema,
+                        cfg=cfg,
+                        candidate_aspects=candidate_aspects,
+                        candidate_aspects_by_language=candidate_aspects_by_language,
+                        candidate_aspect_domain=candidate_aspects_by_domain if domain_conditioning_mode != "off" else {},
+                        train_domain_support=dict(train_domain_support),
+                        domain_conditioning_mode=domain_conditioning_mode,
+                        llm_provider=llm_provider
+                    )
+                    results[idx] = res
+                except Exception as e:
+                    print(f"\n[!] Error processing row {idx} in {split_name}: {str(e)}")
+                    results[idx] = row
+                finally:
+                    pbar.update(1)
 
-        # Process in chunks to avoid overwhelming the event loop or APIs
-        chunk_size = cfg.max_workers * 2
-        results = []
-        with tqdm(total=len(rows), desc=f"Processing {split_name}", leave=False, disable=not cfg.progress) as pbar:
-            for i in range(0, len(rows), chunk_size):
-                chunk = list(enumerate(rows))[i : i + chunk_size]
-                chunk_results = await _run_batch(chunk)
-                results.extend(chunk_results)
-                pbar.update(len(chunk))
-        return results
+        with tqdm(total=len(rows), desc=f"Building {split_name}", leave=False, disable=not cfg.progress) as pbar:
+            tasks = [_bounded_process(i, row, pbar) for i, row in enumerate(rows)]
+            await asyncio.gather(*tasks)
+            
+        return [r for r in results if r is not None]
+
+
+        
+    # Optimized build_split (now using Semaphore/AsyncIO)
 
     train_built = await build_split(train_rows, "train", train_domain_conditioning_mode)
     val_built = await build_split(val_rows, "val", eval_domain_conditioning_mode)
@@ -2454,13 +2481,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--review-set-size", type=int, default=300)
     parser.add_argument("--evaluation-protocol", type=str, default="random", choices=["random", "loo", "source-free"])
     parser.add_argument("--domain-holdout", type=str, default=None)
+    parser.add_argument("--enforce-grounding", dest="enforce_grounding", action="store_true")
     parser.add_argument("--no-enforce-grounding", dest="enforce_grounding", action="store_false")
+    parser.add_argument("--high-difficulty", dest="high_difficulty", action="store_true")
+    parser.add_argument("--no-high-difficulty", dest="high_difficulty", action="store_false")
+    parser.add_argument("--adversarial-refine", dest="adversarial_refine", action="store_true")
+    parser.add_argument("--no-adversarial-refine", dest="adversarial_refine", action="store_false")
     parser.add_argument("--no-domain-conditioning", dest="use_domain_conditioning", action="store_false")
     parser.add_argument("--no-strict-domain-conditioning", dest="strict_domain_conditioning", action="store_false")
     parser.add_argument("--domain-conditioning-mode", type=str, default="adaptive_soft", choices=["adaptive_soft", "strict_hard", "off"])
     parser.add_argument("--train-domain-conditioning-mode", type=str, default=None, choices=["adaptive_soft", "strict_hard", "off"])
     parser.add_argument("--eval-domain-conditioning-mode", type=str, default=None, choices=["adaptive_soft", "strict_hard", "off"])
-    parser.set_defaults(enforce_grounding=True, use_domain_conditioning=True, strict_domain_conditioning=False)
+    parser.set_defaults(enforce_grounding=True, use_domain_conditioning=True, strict_domain_conditioning=False, high_difficulty=False, adversarial_refine=False)
     parser.add_argument("--domain-prior-boost", type=float, default=0.05)
     parser.add_argument("--domain-prior-penalty", type=float, default=0.08)
     parser.add_argument("--weak-domain-support-row-threshold", type=int, default=80)
@@ -2621,6 +2653,8 @@ def main(argv: list[str] | None = None) -> int:
         llm_model_name=args.llm_model_name,
         enable_reasoned_recovery=args.enable_reasoned_recovery,
         max_workers=args.max_workers,
+        high_difficulty=args.high_difficulty,
+        adversarial_refine=args.adversarial_refine,
     )
     import asyncio
     report = asyncio.run(run_pipeline(cfg))

@@ -104,13 +104,21 @@ class AsyncRunPodProvider(AsyncLlmProvider):
                 **kwargs
             }
         }
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            res = await client.post(self.base_url, json=data, headers=self.headers)
-            res.raise_for_status()
-            result = res.json()
-            if "output" in result:
-                return str(result["output"])
-            return json.dumps(result)
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            try:
+                res = await client.post(self.base_url, json=data, headers=self.headers)
+                res.raise_for_status()
+                result = res.json()
+                # RunPod Serverless standard return is {"output": ..., "id": ..., "status": ...}
+                if isinstance(result, dict) and "output" in result:
+                    output = result["output"]
+                    # vLLM/Flash usually returns a string or a dict depending on the template
+                    if isinstance(output, str):
+                        return output
+                    return json.dumps(output)
+                return json.dumps(result)
+            except Exception as e:
+                return f"Error: {str(e)}"
 
 class AsyncOpenAiProvider(AsyncLlmProvider):
     def __init__(self, api_key: str | None = None, base_url: str | None = None):
