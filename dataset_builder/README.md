@@ -16,7 +16,7 @@ python dataset_builder\code\build_dataset.py [options]
 # Standard build
 python dataset_builder\code\build_dataset.py --input-dir dataset_builder\input --output-dir dataset_builder\output
 
-# Small sampled preview run with OpenAI
+# Small sampled preview run with OpenAI 
 python dataset_builder\code\build_dataset.py --run-profile debug --sample-size 100 --llm-provider openai --preview
 
 # Zip existing artifacts only

@@ -16,7 +16,7 @@
         "last_seen": "2026-04-08T15:01:46Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 48,
+        "missing_runs": 52,
         "version": "v1"
       },
       "display_quality": {
@@ -33,7 +33,7 @@
         "last_seen": "2026-04-08T15:01:46Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 48,
+        "missing_runs": 52,
         "version": "v1"
       },
       "service_quality": {
@@ -42,15 +42,15 @@
           "service",
           "staff"
         ],
-        "support_count": 42,
-        "stability_score": 0.84,
+        "support_count": 50,
+        "stability_score": 1.0,
         "sentiment_profile": {
-          "neutral": 57
+          "neutral": 69
         },
         "first_seen": "2026-04-09T05:24:16Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 15,
+        "seen_runs": 19,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -60,15 +60,15 @@
           "performance",
           "wait"
         ],
-        "support_count": 26,
-        "stability_score": 0.52,
+        "support_count": 30,
+        "stability_score": 0.6,
         "sentiment_profile": {
-          "neutral": 30
+          "neutral": 38
         },
         "first_seen": "2026-04-09T05:24:16Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "candidate",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -78,15 +78,15 @@
           "price",
           "value"
         ],
-        "support_count": 22,
-        "stability_score": 0.44,
+        "support_count": 26,
+        "stability_score": 0.52,
         "sentiment_profile": {
-          "neutral": 26
+          "neutral": 34
         },
         "first_seen": "2026-04-09T05:24:16Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "candidate",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -95,15 +95,15 @@
         "aliases": [
           "quality"
         ],
-        "support_count": 30,
-        "stability_score": 0.6,
+        "support_count": 38,
+        "stability_score": 0.76,
         "sentiment_profile": {
-          "neutral": 44
+          "neutral": 56
         },
         "first_seen": "2026-04-09T10:05:16Z",
-        "last_seen": "2026-04-09T16:10:17Z",
-        "status": "candidate",
-        "seen_runs": 14,
+        "last_seen": "2026-04-11T16:09:02Z",
+        "status": "promoted",
+        "seen_runs": 18,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -112,15 +112,15 @@
         "aliases": [
           "service"
         ],
-        "support_count": 30,
-        "stability_score": 0.6,
+        "support_count": 38,
+        "stability_score": 0.76,
         "sentiment_profile": {
-          "neutral": 44
+          "neutral": 56
         },
         "first_seen": "2026-04-09T10:05:16Z",
-        "last_seen": "2026-04-09T16:10:17Z",
-        "status": "candidate",
-        "seen_runs": 14,
+        "last_seen": "2026-04-11T16:09:02Z",
+        "status": "promoted",
+        "seen_runs": 18,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -138,7 +138,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "table": {
@@ -155,7 +155,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "build_quality": {
@@ -172,7 +172,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "price": {
@@ -189,7 +189,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "price_tag": {
@@ -206,7 +206,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "wallet": {
@@ -223,7 +223,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "feel": {
@@ -240,7 +240,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "thermal": {
@@ -257,7 +257,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "pad": {
@@ -274,7 +274,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "cooling_pad": {
@@ -291,7 +291,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "timeliness": {
@@ -308,7 +308,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "staff": {
@@ -325,7 +325,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "wait": {
@@ -342,7 +342,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       }
     },
@@ -361,7 +361,7 @@
         "last_seen": "2026-04-09T10:40:30Z",
         "status": "promoted",
         "seen_runs": 18,
-        "missing_runs": 16,
+        "missing_runs": 20,
         "version": "v1"
       },
       "display_quality": {
@@ -378,7 +378,7 @@
         "last_seen": "2026-04-09T10:40:30Z",
         "status": "candidate",
         "seen_runs": 11,
-        "missing_runs": 16,
+        "missing_runs": 20,
         "version": "v1"
       }
     },
@@ -397,7 +397,7 @@
         "last_seen": "2026-04-08T16:05:13Z",
         "status": "candidate",
         "seen_runs": 2,
-        "missing_runs": 46,
+        "missing_runs": 50,
         "version": "v1"
       },
       "comfort": {
@@ -414,7 +414,7 @@
         "last_seen": "2026-04-08T16:05:13Z",
         "status": "candidate",
         "seen_runs": 2,
-        "missing_runs": 46,
+        "missing_runs": 50,
         "version": "v1"
       },
       "build_quality": {
@@ -431,7 +431,7 @@
         "last_seen": "2026-04-08T16:05:13Z",
         "status": "candidate",
         "seen_runs": 2,
-        "missing_runs": 46,
+        "missing_runs": 50,
         "version": "v1"
       },
       "display_quality": {
@@ -448,7 +448,7 @@
         "last_seen": "2026-04-08T16:05:13Z",
         "status": "candidate",
         "seen_runs": 2,
-        "missing_runs": 46,
+        "missing_runs": 50,
         "version": "v1"
       }
     },
@@ -469,17 +469,17 @@
           "staff",
           "support"
         ],
-        "support_count": 904,
+        "support_count": 908,
         "stability_score": 1.0,
         "sentiment_profile": {
           "neutral": 521,
           "negative": 58,
-          "positive": 335
+          "positive": 343
         },
         "first_seen": "2026-04-08T16:10:47Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 10,
+        "seen_runs": 14,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -502,17 +502,17 @@
           "value",
           "worth"
         ],
-        "support_count": 1228,
+        "support_count": 1240,
         "stability_score": 1.0,
         "sentiment_profile": {
-          "positive": 421,
-          "neutral": 637,
+          "positive": 425,
+          "neutral": 649,
           "negative": 180
         },
         "first_seen": "2026-04-08T16:10:47Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 10,
+        "seen_runs": 14,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -534,17 +534,17 @@
           "power",
           "short life"
         ],
-        "support_count": 1480,
+        "support_count": 1492,
         "stability_score": 1.0,
         "sentiment_profile": {
-          "neutral": 1138,
+          "neutral": 1154,
           "positive": 241,
           "negative": 111
         },
         "first_seen": "2026-04-08T16:10:47Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 10,
+        "seen_runs": 14,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -572,7 +572,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "promoted",
         "seen_runs": 7,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "sensory_quality": {
@@ -589,17 +589,17 @@
           "sound",
           "yummy"
         ],
-        "support_count": 360,
+        "support_count": 368,
         "stability_score": 1.0,
         "sentiment_profile": {
           "negative": 33,
-          "neutral": 252,
-          "positive": 84
+          "neutral": 260,
+          "positive": 88
         },
         "first_seen": "2026-04-08T16:10:47Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 9,
+        "seen_runs": 13,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -618,17 +618,17 @@
           "simple",
           "stuck"
         ],
-        "support_count": 719,
+        "support_count": 723,
         "stability_score": 1.0,
         "sentiment_profile": {
-          "positive": 568,
+          "positive": 576,
           "neutral": 134,
           "negative": 26
         },
         "first_seen": "2026-04-08T16:10:47Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 9,
+        "seen_runs": 13,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -659,17 +659,17 @@
           "useless",
           "warranty"
         ],
-        "support_count": 1169,
+        "support_count": 1185,
         "stability_score": 1.0,
         "sentiment_profile": {
-          "neutral": 835,
+          "neutral": 855,
           "negative": 248,
           "positive": 96
         },
         "first_seen": "2026-04-08T16:10:47Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 10,
+        "seen_runs": 14,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -696,17 +696,17 @@
           "the graphics",
           "wait"
         ],
-        "support_count": 1997,
+        "support_count": 2029,
         "stability_score": 1.0,
         "sentiment_profile": {
-          "positive": 706,
-          "neutral": 1037,
-          "negative": 264
+          "positive": 722,
+          "neutral": 1049,
+          "negative": 272
         },
         "first_seen": "2026-04-08T16:10:47Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 10,
+        "seen_runs": 14,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -726,17 +726,17 @@
           "wifi",
           "wireless"
         ],
-        "support_count": 545,
+        "support_count": 553,
         "stability_score": 1.0,
         "sentiment_profile": {
           "negative": 37,
-          "neutral": 411,
+          "neutral": 423,
           "positive": 106
         },
         "first_seen": "2026-04-08T16:10:47Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 9,
+        "seen_runs": 13,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -768,7 +768,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "promoted",
         "seen_runs": 7,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "timeliness": {
@@ -787,17 +787,17 @@
           "wait",
           "waiting"
         ],
-        "support_count": 853,
+        "support_count": 865,
         "stability_score": 1.0,
         "sentiment_profile": {
-          "positive": 410,
+          "positive": 422,
           "negative": 68,
-          "neutral": 385
+          "neutral": 389
         },
         "first_seen": "2026-04-08T16:10:47Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 10,
+        "seen_runs": 14,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -819,17 +819,17 @@
           "the graphics",
           "vivid"
         ],
-        "support_count": 1146,
+        "support_count": 1154,
         "stability_score": 1.0,
         "sentiment_profile": {
-          "neutral": 673,
+          "neutral": 685,
           "positive": 398,
           "negative": 84
         },
         "first_seen": "2026-04-08T16:10:47Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 9,
+        "seen_runs": 13,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -855,7 +855,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "promoted",
         "seen_runs": 7,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "cleanliness": {
@@ -881,7 +881,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "promoted",
         "seen_runs": 7,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "acer_arcade": {
@@ -889,15 +889,15 @@
         "aliases": [
           "acer arcade"
         ],
-        "support_count": 5,
-        "stability_score": 0.1,
+        "support_count": 9,
+        "stability_score": 0.18,
         "sentiment_profile": {
-          "positive": 10
+          "positive": 18
         },
         "first_seen": "2026-04-09T10:42:22Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 5,
+        "seen_runs": 9,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -906,17 +906,17 @@
         "aliases": [
           "vista"
         ],
-        "support_count": 24,
-        "stability_score": 0.48,
+        "support_count": 44,
+        "stability_score": 0.88,
         "sentiment_profile": {
-          "neutral": 22,
-          "negative": 5,
+          "neutral": 42,
+          "negative": 9,
           "positive": 1
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
-        "status": "candidate",
-        "seen_runs": 4,
+        "last_seen": "2026-04-11T16:09:02Z",
+        "status": "promoted",
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -925,15 +925,15 @@
         "aliases": [
           "photobooth"
         ],
-        "support_count": 4,
-        "stability_score": 0.08,
+        "support_count": 8,
+        "stability_score": 0.16,
         "sentiment_profile": {
-          "positive": 8
+          "positive": 16
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -942,16 +942,16 @@
         "aliases": [
           "program"
         ],
-        "support_count": 9,
-        "stability_score": 0.18,
+        "support_count": 13,
+        "stability_score": 0.26,
         "sentiment_profile": {
-          "positive": 10,
+          "positive": 18,
           "neutral": 3
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -960,16 +960,16 @@
         "aliases": [
           "pictures"
         ],
-        "support_count": 6,
-        "stability_score": 0.12,
+        "support_count": 10,
+        "stability_score": 0.2,
         "sentiment_profile": {
-          "positive": 8,
+          "positive": 16,
           "neutral": 2
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -978,15 +978,15 @@
         "aliases": [
           "camera"
         ],
-        "support_count": 4,
-        "stability_score": 0.08,
+        "support_count": 8,
+        "stability_score": 0.16,
         "sentiment_profile": {
-          "positive": 8
+          "positive": 16
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -995,16 +995,16 @@
         "aliases": [
           "built"
         ],
-        "support_count": 10,
-        "stability_score": 0.2,
+        "support_count": 14,
+        "stability_score": 0.28,
         "sentiment_profile": {
-          "positive": 9,
+          "positive": 17,
           "neutral": 5
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1013,16 +1013,16 @@
         "aliases": [
           "good"
         ],
-        "support_count": 20,
-        "stability_score": 0.4,
+        "support_count": 28,
+        "stability_score": 0.56,
         "sentiment_profile": {
-          "positive": 20,
-          "negative": 4
+          "positive": 28,
+          "negative": 8
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "candidate",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1031,15 +1031,15 @@
         "aliases": [
           "built-in camera"
         ],
-        "support_count": 4,
-        "stability_score": 0.08,
+        "support_count": 8,
+        "stability_score": 0.16,
         "sentiment_profile": {
-          "positive": 8
+          "positive": 16
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1049,15 +1049,15 @@
           "a bid hd.",
           "hdd"
         ],
-        "support_count": 6,
-        "stability_score": 0.12,
+        "support_count": 10,
+        "stability_score": 0.2,
         "sentiment_profile": {
-          "neutral": 10
+          "neutral": 18
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1066,17 +1066,17 @@
         "aliases": [
           "hard drive"
         ],
-        "support_count": 12,
-        "stability_score": 0.24,
+        "support_count": 16,
+        "stability_score": 0.32,
         "sentiment_profile": {
-          "neutral": 14,
+          "neutral": 22,
           "negative": 1,
           "positive": 1
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
-        "status": "deprecated",
-        "seen_runs": 4,
+        "last_seen": "2026-04-11T16:09:02Z",
+        "status": "candidate",
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1085,17 +1085,17 @@
         "aliases": [
           "drive"
         ],
-        "support_count": 19,
-        "stability_score": 0.38,
+        "support_count": 23,
+        "stability_score": 0.46,
         "sentiment_profile": {
-          "neutral": 21,
+          "neutral": 29,
           "negative": 1,
           "positive": 1
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "candidate",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1104,15 +1104,15 @@
         "aliases": [
           "budget"
         ],
-        "support_count": 5,
-        "stability_score": 0.1,
+        "support_count": 9,
+        "stability_score": 0.18,
         "sentiment_profile": {
-          "neutral": 9
+          "neutral": 17
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1121,15 +1121,15 @@
         "aliases": [
           "shipping"
         ],
-        "support_count": 6,
-        "stability_score": 0.12,
+        "support_count": 10,
+        "stability_score": 0.2,
         "sentiment_profile": {
-          "neutral": 10
+          "neutral": 18
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1138,16 +1138,16 @@
         "aliases": [
           "price"
         ],
-        "support_count": 21,
-        "stability_score": 0.42,
+        "support_count": 25,
+        "stability_score": 0.5,
         "sentiment_profile": {
-          "positive": 18,
+          "positive": 26,
           "neutral": 7
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "candidate",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1156,16 +1156,16 @@
         "aliases": [
           "size"
         ],
-        "support_count": 17,
-        "stability_score": 0.34,
+        "support_count": 21,
+        "stability_score": 0.42,
         "sentiment_profile": {
-          "neutral": 19,
+          "neutral": 27,
           "positive": 2
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "candidate",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1176,15 +1176,15 @@
           "weight",
           "would help if it was a little lighter then it is."
         ],
-        "support_count": 11,
-        "stability_score": 0.22,
+        "support_count": 15,
+        "stability_score": 0.3,
         "sentiment_profile": {
-          "neutral": 15
+          "neutral": 23
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
-        "status": "deprecated",
-        "seen_runs": 4,
+        "last_seen": "2026-04-11T16:09:02Z",
+        "status": "candidate",
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1194,15 +1194,15 @@
           "portability",
           "the macbooks are small enough to be very portable"
         ],
-        "support_count": 5,
-        "stability_score": 0.1,
+        "support_count": 9,
+        "stability_score": 0.18,
         "sentiment_profile": {
-          "neutral": 9
+          "neutral": 17
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1211,15 +1211,15 @@
         "aliases": [
           "usb"
         ],
-        "support_count": 5,
-        "stability_score": 0.1,
+        "support_count": 9,
+        "stability_score": 0.18,
         "sentiment_profile": {
-          "neutral": 9
+          "neutral": 17
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1228,15 +1228,15 @@
         "aliases": [
           "usb"
         ],
-        "support_count": 7,
-        "stability_score": 0.14,
+        "support_count": 11,
+        "stability_score": 0.22,
         "sentiment_profile": {
-          "neutral": 11
+          "neutral": 19
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1245,16 +1245,16 @@
         "aliases": [
           "working"
         ],
-        "support_count": 11,
-        "stability_score": 0.22,
+        "support_count": 15,
+        "stability_score": 0.3,
         "sentiment_profile": {
-          "neutral": 10,
+          "neutral": 18,
           "negative": 5
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
-        "status": "deprecated",
-        "seen_runs": 4,
+        "last_seen": "2026-04-11T16:09:02Z",
+        "status": "candidate",
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1263,15 +1263,15 @@
         "aliases": [
           "ports"
         ],
-        "support_count": 5,
-        "stability_score": 0.1,
+        "support_count": 9,
+        "stability_score": 0.18,
         "sentiment_profile": {
-          "neutral": 9
+          "neutral": 17
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1280,17 +1280,17 @@
         "aliases": [
           "battery"
         ],
-        "support_count": 40,
-        "stability_score": 0.8,
+        "support_count": 52,
+        "stability_score": 1.0,
         "sentiment_profile": {
-          "neutral": 36,
+          "neutral": 52,
           "positive": 6,
           "negative": 2
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1299,16 +1299,16 @@
         "aliases": [
           "battery life"
         ],
-        "support_count": 25,
-        "stability_score": 0.5,
+        "support_count": 37,
+        "stability_score": 0.74,
         "sentiment_profile": {
-          "neutral": 24,
+          "neutral": 40,
           "positive": 5
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
-        "status": "candidate",
-        "seen_runs": 4,
+        "last_seen": "2026-04-11T16:09:02Z",
+        "status": "promoted",
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1317,16 +1317,16 @@
         "aliases": [
           "life"
         ],
-        "support_count": 33,
-        "stability_score": 0.66,
+        "support_count": 45,
+        "stability_score": 0.9,
         "sentiment_profile": {
-          "neutral": 32,
+          "neutral": 48,
           "positive": 5
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
-        "status": "candidate",
-        "seen_runs": 4,
+        "last_seen": "2026-04-11T16:09:02Z",
+        "status": "promoted",
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1335,17 +1335,17 @@
         "aliases": [
           "memory"
         ],
-        "support_count": 22,
-        "stability_score": 0.44,
+        "support_count": 30,
+        "stability_score": 0.6,
         "sentiment_profile": {
-          "neutral": 20,
+          "neutral": 32,
           "positive": 4,
           "negative": 2
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "candidate",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1354,15 +1354,15 @@
         "aliases": [
           "amount"
         ],
-        "support_count": 6,
-        "stability_score": 0.12,
+        "support_count": 10,
+        "stability_score": 0.2,
         "sentiment_profile": {
-          "neutral": 10
+          "neutral": 18
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1371,17 +1371,17 @@
         "aliases": [
           "operating system"
         ],
-        "support_count": 14,
-        "stability_score": 0.28,
+        "support_count": 22,
+        "stability_score": 0.44,
         "sentiment_profile": {
-          "negative": 9,
-          "neutral": 6,
+          "negative": 17,
+          "neutral": 10,
           "positive": 3
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
-        "status": "deprecated",
-        "seen_runs": 4,
+        "last_seen": "2026-04-11T16:09:02Z",
+        "status": "candidate",
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1390,17 +1390,17 @@
         "aliases": [
           "system"
         ],
-        "support_count": 21,
-        "stability_score": 0.42,
+        "support_count": 29,
+        "stability_score": 0.58,
         "sentiment_profile": {
-          "negative": 10,
-          "neutral": 12,
+          "negative": 18,
+          "neutral": 16,
           "positive": 3
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "candidate",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1409,16 +1409,16 @@
         "aliases": [
           "runs"
         ],
-        "support_count": 15,
-        "stability_score": 0.3,
+        "support_count": 19,
+        "stability_score": 0.38,
         "sentiment_profile": {
-          "positive": 15,
+          "positive": 23,
           "neutral": 4
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "candidate",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1427,16 +1427,16 @@
         "aliases": [
           "garageband"
         ],
-        "support_count": 11,
-        "stability_score": 0.22,
+        "support_count": 15,
+        "stability_score": 0.3,
         "sentiment_profile": {
-          "positive": 13,
+          "positive": 21,
           "neutral": 2
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
-        "status": "deprecated",
-        "seen_runs": 4,
+        "last_seen": "2026-04-11T16:09:02Z",
+        "status": "candidate",
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1445,16 +1445,16 @@
         "aliases": [
           "iphoto"
         ],
-        "support_count": 9,
-        "stability_score": 0.18,
+        "support_count": 13,
+        "stability_score": 0.26,
         "sentiment_profile": {
-          "positive": 11,
+          "positive": 19,
           "neutral": 2
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1463,15 +1463,15 @@
         "aliases": [
           "ilife software"
         ],
-        "support_count": 6,
-        "stability_score": 0.12,
+        "support_count": 10,
+        "stability_score": 0.2,
         "sentiment_profile": {
-          "positive": 10
+          "positive": 18
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1480,17 +1480,17 @@
         "aliases": [
           "software"
         ],
-        "support_count": 25,
-        "stability_score": 0.5,
+        "support_count": 33,
+        "stability_score": 0.66,
         "sentiment_profile": {
-          "positive": 16,
+          "positive": 28,
           "neutral": 12,
           "negative": 1
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "candidate",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1499,16 +1499,16 @@
         "aliases": [
           "imovie"
         ],
-        "support_count": 10,
-        "stability_score": 0.2,
+        "support_count": 14,
+        "stability_score": 0.28,
         "sentiment_profile": {
-          "positive": 10,
+          "positive": 18,
           "neutral": 4
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1517,15 +1517,15 @@
         "aliases": [
           "ilife"
         ],
-        "support_count": 7,
-        "stability_score": 0.14,
+        "support_count": 11,
+        "stability_score": 0.22,
         "sentiment_profile": {
-          "positive": 11
+          "positive": 19
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1534,15 +1534,15 @@
         "aliases": [
           "iweb"
         ],
-        "support_count": 6,
-        "stability_score": 0.12,
+        "support_count": 10,
+        "stability_score": 0.2,
         "sentiment_profile": {
-          "positive": 10
+          "positive": 18
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 4,
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1551,15 +1551,15 @@
         "aliases": [
           "laptop was in new condition"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "neutral": 6
+          "neutral": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1568,15 +1568,15 @@
         "aliases": [
           "operational"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "neutral": 6
+          "neutral": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1585,15 +1585,15 @@
         "aliases": [
           "operational"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "neutral": 6
+          "neutral": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1602,15 +1602,15 @@
         "aliases": [
           "audio"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "neutral": 6
+          "neutral": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1619,16 +1619,16 @@
         "aliases": [
           "repair"
         ],
-        "support_count": 8,
-        "stability_score": 0.16,
+        "support_count": 12,
+        "stability_score": 0.24,
         "sentiment_profile": {
-          "neutral": 10,
+          "neutral": 18,
           "negative": 1
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1637,15 +1637,15 @@
         "aliases": [
           "key broad"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "neutral": 6
+          "neutral": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1654,15 +1654,15 @@
         "aliases": [
           "extended warranty"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "neutral": 6
+          "neutral": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1671,17 +1671,17 @@
         "aliases": [
           "warranty"
         ],
-        "support_count": 11,
-        "stability_score": 0.22,
+        "support_count": 15,
+        "stability_score": 0.3,
         "sentiment_profile": {
-          "neutral": 12,
+          "neutral": 20,
           "negative": 1,
           "positive": 1
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
-        "status": "deprecated",
-        "seen_runs": 3,
+        "last_seen": "2026-04-11T16:09:02Z",
+        "status": "candidate",
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1690,15 +1690,15 @@
         "aliases": [
           "transporting"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "positive": 6
+          "positive": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1707,17 +1707,17 @@
         "aliases": [
           "run"
         ],
-        "support_count": 20,
-        "stability_score": 0.4,
+        "support_count": 28,
+        "stability_score": 0.56,
         "sentiment_profile": {
-          "neutral": 15,
-          "negative": 3,
+          "neutral": 23,
+          "negative": 7,
           "positive": 5
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "candidate",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1726,17 +1726,17 @@
         "aliases": [
           "use"
         ],
-        "support_count": 45,
-        "stability_score": 0.9,
+        "support_count": 53,
+        "stability_score": 1.0,
         "sentiment_profile": {
-          "positive": 20,
-          "neutral": 27,
+          "positive": 28,
+          "neutral": 31,
           "negative": 1
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1745,15 +1745,15 @@
         "aliases": [
           "external mouse"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "positive": 6
+          "positive": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1762,16 +1762,16 @@
         "aliases": [
           "mouse"
         ],
-        "support_count": 13,
-        "stability_score": 0.26,
+        "support_count": 17,
+        "stability_score": 0.34,
         "sentiment_profile": {
-          "positive": 7,
+          "positive": 15,
           "neutral": 9
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
-        "status": "deprecated",
-        "seen_runs": 3,
+        "last_seen": "2026-04-11T16:09:02Z",
+        "status": "candidate",
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1780,15 +1780,15 @@
         "aliases": [
           "trackpad"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "positive": 6
+          "positive": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1797,16 +1797,16 @@
         "aliases": [
           "loaded"
         ],
-        "support_count": 4,
-        "stability_score": 0.08,
+        "support_count": 8,
+        "stability_score": 0.16,
         "sentiment_profile": {
-          "negative": 6,
+          "negative": 14,
           "neutral": 1
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1815,17 +1815,17 @@
         "aliases": [
           "programs"
         ],
-        "support_count": 17,
-        "stability_score": 0.34,
+        "support_count": 21,
+        "stability_score": 0.42,
         "sentiment_profile": {
-          "negative": 7,
+          "negative": 15,
           "neutral": 10,
           "positive": 3
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "candidate",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1834,15 +1834,15 @@
         "aliases": [
           "booting up"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "positive": 6
+          "positive": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1851,15 +1851,15 @@
         "aliases": [
           "shutting down"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "positive": 6
+          "positive": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1868,16 +1868,16 @@
         "aliases": [
           "booting"
         ],
-        "support_count": 4,
-        "stability_score": 0.08,
+        "support_count": 8,
+        "stability_score": 0.16,
         "sentiment_profile": {
-          "positive": 6,
+          "positive": 14,
           "neutral": 1
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1886,16 +1886,16 @@
         "aliases": [
           "connection"
         ],
-        "support_count": 5,
-        "stability_score": 0.1,
+        "support_count": 9,
+        "stability_score": 0.18,
         "sentiment_profile": {
-          "neutral": 7,
+          "neutral": 15,
           "negative": 1
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1904,15 +1904,15 @@
         "aliases": [
           "connection with the internet"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "neutral": 6
+          "neutral": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1921,17 +1921,17 @@
         "aliases": [
           "internet"
         ],
-        "support_count": 12,
-        "stability_score": 0.24,
+        "support_count": 20,
+        "stability_score": 0.4,
         "sentiment_profile": {
-          "neutral": 12,
+          "neutral": 24,
           "positive": 2,
           "negative": 1
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
-        "status": "deprecated",
-        "seen_runs": 3,
+        "last_seen": "2026-04-11T16:09:02Z",
+        "status": "candidate",
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1940,16 +1940,16 @@
         "aliases": [
           "priced"
         ],
-        "support_count": 4,
-        "stability_score": 0.08,
+        "support_count": 8,
+        "stability_score": 0.16,
         "sentiment_profile": {
-          "neutral": 6,
+          "neutral": 14,
           "negative": 1
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1958,16 +1958,16 @@
         "aliases": [
           "works"
         ],
-        "support_count": 10,
-        "stability_score": 0.2,
+        "support_count": 14,
+        "stability_score": 0.28,
         "sentiment_profile": {
-          "neutral": 11,
+          "neutral": 19,
           "positive": 2
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1976,15 +1976,15 @@
         "aliases": [
           "place"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "neutral": 6
+          "neutral": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -1993,15 +1993,15 @@
         "aliases": [
           "cursor"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "neutral": 6
+          "neutral": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2010,15 +2010,15 @@
         "aliases": [
           "mousepad"
         ],
-        "support_count": 5,
-        "stability_score": 0.1,
+        "support_count": 9,
+        "stability_score": 0.18,
         "sentiment_profile": {
-          "neutral": 8
+          "neutral": 16
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2027,16 +2027,16 @@
         "aliases": [
           "applications"
         ],
-        "support_count": 15,
-        "stability_score": 0.3,
+        "support_count": 19,
+        "stability_score": 0.38,
         "sentiment_profile": {
-          "neutral": 16,
+          "neutral": 24,
           "positive": 2
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "candidate",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2045,16 +2045,16 @@
         "aliases": [
           "gaming"
         ],
-        "support_count": 8,
-        "stability_score": 0.16,
+        "support_count": 16,
+        "stability_score": 0.32,
         "sentiment_profile": {
-          "neutral": 10,
+          "neutral": 22,
           "positive": 1
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
-        "status": "deprecated",
-        "seen_runs": 3,
+        "last_seen": "2026-04-11T16:09:02Z",
+        "status": "candidate",
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2063,17 +2063,17 @@
         "aliases": [
           "screen"
         ],
-        "support_count": 29,
-        "stability_score": 0.58,
+        "support_count": 33,
+        "stability_score": 0.66,
         "sentiment_profile": {
-          "neutral": 25,
+          "neutral": 33,
           "positive": 5,
           "negative": 2
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "candidate",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2082,15 +2082,15 @@
         "aliases": [
           "colors"
         ],
-        "support_count": 4,
-        "stability_score": 0.08,
+        "support_count": 8,
+        "stability_score": 0.16,
         "sentiment_profile": {
-          "positive": 7
+          "positive": 15
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2099,15 +2099,15 @@
         "aliases": [
           "resolution"
         ],
-        "support_count": 4,
-        "stability_score": 0.08,
+        "support_count": 8,
+        "stability_score": 0.16,
         "sentiment_profile": {
-          "neutral": 7
+          "neutral": 15
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2116,15 +2116,15 @@
         "aliases": [
           "volume control"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "neutral": 6
+          "neutral": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2133,16 +2133,16 @@
         "aliases": [
           "volume"
         ],
-        "support_count": 5,
-        "stability_score": 0.1,
+        "support_count": 9,
+        "stability_score": 0.18,
         "sentiment_profile": {
-          "neutral": 6,
+          "neutral": 14,
           "positive": 2
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2151,15 +2151,15 @@
         "aliases": [
           "browsing"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "neutral": 6
+          "neutral": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2168,15 +2168,15 @@
         "aliases": [
           "web browsing"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "neutral": 6
+          "neutral": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2185,15 +2185,15 @@
         "aliases": [
           "word editing"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "positive": 6
+          "positive": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2202,17 +2202,17 @@
         "aliases": [
           "office"
         ],
-        "support_count": 16,
-        "stability_score": 0.32,
+        "support_count": 20,
+        "stability_score": 0.4,
         "sentiment_profile": {
-          "positive": 7,
+          "positive": 15,
           "neutral": 10,
           "negative": 2
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "candidate",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2221,16 +2221,16 @@
         "aliases": [
           "editing"
         ],
-        "support_count": 6,
-        "stability_score": 0.12,
+        "support_count": 10,
+        "stability_score": 0.2,
         "sentiment_profile": {
-          "positive": 6,
+          "positive": 14,
           "neutral": 3
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2239,16 +2239,16 @@
         "aliases": [
           "word"
         ],
-        "support_count": 12,
-        "stability_score": 0.24,
+        "support_count": 16,
+        "stability_score": 0.32,
         "sentiment_profile": {
-          "positive": 8,
+          "positive": 16,
           "neutral": 7
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
-        "status": "deprecated",
-        "seen_runs": 3,
+        "last_seen": "2026-04-11T16:09:02Z",
+        "status": "candidate",
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2257,15 +2257,15 @@
         "aliases": [
           "movie playing"
         ],
-        "support_count": 3,
-        "stability_score": 0.06,
+        "support_count": 7,
+        "stability_score": 0.14,
         "sentiment_profile": {
-          "neutral": 6
+          "neutral": 14
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2274,16 +2274,16 @@
         "aliases": [
           "playing"
         ],
-        "support_count": 4,
-        "stability_score": 0.08,
+        "support_count": 8,
+        "stability_score": 0.16,
         "sentiment_profile": {
-          "neutral": 6,
+          "neutral": 14,
           "positive": 1
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2292,15 +2292,15 @@
         "aliases": [
           "mac software"
         ],
-        "support_count": 4,
-        "stability_score": 0.08,
+        "support_count": 8,
+        "stability_score": 0.16,
         "sentiment_profile": {
-          "positive": 7
+          "positive": 15
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2309,15 +2309,15 @@
         "aliases": [
           "stability"
         ],
-        "support_count": 4,
-        "stability_score": 0.08,
+        "support_count": 8,
+        "stability_score": 0.16,
         "sentiment_profile": {
-          "positive": 7
+          "positive": 15
         },
         "first_seen": "2026-04-09T11:17:21Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "deprecated",
-        "seen_runs": 3,
+        "seen_runs": 7,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -2336,7 +2336,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "feature": {
@@ -2354,7 +2354,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "look": {
@@ -2372,7 +2372,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "work": {
@@ -2390,7 +2390,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "microsoft_office_for_the_mac": {
@@ -2407,7 +2407,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "microsoft_office": {
@@ -2425,7 +2425,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "bootcamp": {
@@ -2442,7 +2442,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "seated": {
@@ -2459,7 +2459,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "cd_drive": {
@@ -2476,7 +2476,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "stuff": {
@@ -2493,7 +2493,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "systems": {
@@ -2510,7 +2510,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "operating_systems": {
@@ -2527,7 +2527,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "navigation": {
@@ -2544,7 +2544,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "user_interface": {
@@ -2561,7 +2561,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "music": {
@@ -2579,7 +2579,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "play": {
@@ -2596,7 +2596,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "bluetooth": {
@@ -2613,7 +2613,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "launch_manager": {
@@ -2630,7 +2630,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "install": {
@@ -2650,7 +2650,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "drivers": {
@@ -2667,7 +2667,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "dvd": {
@@ -2685,7 +2685,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "manager": {
@@ -2702,7 +2702,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "screen_size": {
@@ -2719,7 +2719,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "fit": {
@@ -2736,7 +2736,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "table": {
@@ -2753,7 +2753,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "space": {
@@ -2770,7 +2770,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "food": {
@@ -2787,7 +2787,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "features": {
@@ -2805,7 +2805,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "functioning": {
@@ -2822,7 +2822,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "money": {
@@ -2840,7 +2840,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "course": {
@@ -2858,7 +2858,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "connections": {
@@ -2875,7 +2875,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "looking": {
@@ -2893,7 +2893,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "keyboard": {
@@ -2912,7 +2912,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "side": {
@@ -2930,7 +2930,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "order": {
@@ -2947,7 +2947,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "webcam": {
@@ -2965,7 +2965,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "carry": {
@@ -2983,7 +2983,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "bag": {
@@ -3000,7 +3000,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "fingerprint_reader": {
@@ -3017,7 +3017,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "fingerprint_reader_driver": {
@@ -3034,7 +3034,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "driver": {
@@ -3051,7 +3051,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "charger": {
@@ -3069,7 +3069,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "running": {
@@ -3086,7 +3086,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "hardware": {
@@ -3103,7 +3103,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "wireless": {
@@ -3120,7 +3120,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "built_in_wireless": {
@@ -3137,7 +3137,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "ease": {
@@ -3155,7 +3155,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "display": {
@@ -3174,7 +3174,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "spotlight_search": {
@@ -3191,7 +3191,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "typing": {
@@ -3208,7 +3208,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "sony_sonic_stage_software": {
@@ -3225,7 +3225,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "extended_life_battery": {
@@ -3242,7 +3242,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "bluetooth_enabled": {
@@ -3259,7 +3259,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "bluetooth_mouse": {
@@ -3276,7 +3276,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "subwoofer": {
@@ -3293,7 +3293,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "docking_port": {
@@ -3310,7 +3310,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "port": {
@@ -3327,7 +3327,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "book": {
@@ -3345,7 +3345,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "system_performance": {
@@ -3362,7 +3362,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "linux_based_os": {
@@ -3379,7 +3379,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "linux": {
@@ -3396,7 +3396,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "1_year_warranty": {
@@ -3413,7 +3413,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "tech_support": {
@@ -3430,7 +3430,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "support": {
@@ -3447,7 +3447,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "online_chat": {
@@ -3464,7 +3464,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "boot_up": {
@@ -3483,7 +3483,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "boot": {
@@ -3502,7 +3502,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "line": {
@@ -3519,7 +3519,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "17_inch_screen": {
@@ -3537,7 +3537,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "dell_support": {
@@ -3554,7 +3554,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "repair_technician": {
@@ -3571,7 +3571,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "technician": {
@@ -3588,7 +3588,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "power_light": {
@@ -3605,7 +3605,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "os_x": {
@@ -3622,7 +3622,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "quicklook": {
@@ -3639,7 +3639,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "service": {
@@ -3657,7 +3657,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "mac_osx": {
@@ -3674,7 +3674,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "osx": {
@@ -3691,7 +3691,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "quality": {
@@ -3710,7 +3710,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "processing": {
@@ -3728,7 +3728,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "speed": {
@@ -3746,7 +3746,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "motherboard": {
@@ -3764,7 +3764,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "specs": {
@@ -3782,7 +3782,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "load": {
@@ -3800,7 +3800,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "kernal": {
@@ -3817,7 +3817,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "apple_team": {
@@ -3834,7 +3834,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "my_toshiba_feature": {
@@ -3852,7 +3852,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "toshiba_tech_support": {
@@ -3869,7 +3869,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "shut_down": {
@@ -3886,7 +3886,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "wait": {
@@ -3903,7 +3903,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "video_chat": {
@@ -3920,7 +3920,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "video": {
@@ -3937,7 +3937,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "starter": {
@@ -3955,7 +3955,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "keynote": {
@@ -3972,7 +3972,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "sensitivity": {
@@ -3990,7 +3990,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "mousepad_sensitivity": {
@@ -4007,7 +4007,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "preloaded_software": {
@@ -4024,7 +4024,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "screens": {
@@ -4041,7 +4041,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "updates": {
@@ -4058,7 +4058,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "wallet": {
@@ -4075,7 +4075,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "casing": {
@@ -4093,7 +4093,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "mac_version_of_microsoft_office": {
@@ -4110,7 +4110,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "disc_drive": {
@@ -4127,7 +4127,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "geek_squad": {
@@ -4144,7 +4144,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "lcd": {
@@ -4161,7 +4161,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "hinge": {
@@ -4178,7 +4178,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "school_or_office_use": {
@@ -4195,7 +4195,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "management": {
@@ -4213,7 +4213,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "photo_booth": {
@@ -4230,7 +4230,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "photo_management": {
@@ -4247,7 +4247,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "video_editing": {
@@ -4264,7 +4264,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "movie_making": {
@@ -4281,7 +4281,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "case_design": {
@@ -4298,7 +4298,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "outside": {
@@ -4316,7 +4316,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "case": {
@@ -4334,7 +4334,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "design": {
@@ -4352,7 +4352,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "safari": {
@@ -4369,7 +4369,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "final_cut_pro": {
@@ -4386,7 +4386,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "photoshop": {
@@ -4403,7 +4403,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "msn_messenger": {
@@ -4420,7 +4420,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "final_cut_pro_7": {
@@ -4437,7 +4437,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "firefox": {
@@ -4454,7 +4454,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "dreamweaver": {
@@ -4471,7 +4471,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "cost": {
@@ -4488,7 +4488,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "word_processing": {
@@ -4506,7 +4506,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "peformance": {
@@ -4523,7 +4523,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "dvd_burner": {
@@ -4540,7 +4540,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "power_supply": {
@@ -4557,7 +4557,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "fan": {
@@ -4574,7 +4574,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "bar": {
@@ -4592,7 +4592,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "staff": {
@@ -4609,7 +4609,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "security": {
@@ -4626,7 +4626,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "pricetag": {
@@ -4643,7 +4643,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "wheel": {
@@ -4661,7 +4661,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "volume_wheel": {
@@ -4678,7 +4678,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "sound_quality": {
@@ -4695,7 +4695,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "sound": {
@@ -4712,7 +4712,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "bulk": {
@@ -4729,7 +4729,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "depot": {
@@ -4746,7 +4746,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "managers": {
@@ -4763,7 +4763,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "wireless_system": {
@@ -4780,7 +4780,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "costs": {
@@ -4797,7 +4797,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "sized": {
@@ -4816,7 +4816,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "processor": {
@@ -4834,7 +4834,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "document_creation": {
@@ -4851,7 +4851,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "word_processor": {
@@ -4868,7 +4868,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "iwork": {
@@ -4887,7 +4887,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "charged": {
@@ -4904,7 +4904,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "syncing": {
@@ -4921,7 +4921,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "security_prone_os": {
@@ -4938,7 +4938,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "sound_output_quality": {
@@ -4955,7 +4955,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "ground_loop_isolator": {
@@ -4972,7 +4972,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "price_range": {
@@ -4989,7 +4989,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "led_backlit_display": {
@@ -5006,7 +5006,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "memory_stick": {
@@ -5023,7 +5023,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "printer": {
@@ -5040,7 +5040,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "17_ince_screen": {
@@ -5057,7 +5057,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "hardrive": {
@@ -5074,7 +5074,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "leading_edge": {
@@ -5091,7 +5091,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "edge": {
@@ -5109,7 +5109,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "storage_life": {
@@ -5126,7 +5126,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "storage": {
@@ -5143,7 +5143,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "force": {
@@ -5160,7 +5160,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "durability": {
@@ -5177,7 +5177,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "aluminum_style": {
@@ -5194,7 +5194,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "nvidia_9800": {
@@ -5211,7 +5211,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "style": {
@@ -5228,7 +5228,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "glass_touchpad": {
@@ -5245,7 +5245,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "touchpad": {
@@ -5263,7 +5263,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "core2_quad": {
@@ -5280,7 +5280,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "construction_quality": {
@@ -5297,7 +5297,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "longevity": {
@@ -5314,7 +5314,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "pad": {
@@ -5331,7 +5331,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "iphotos": {
@@ -5348,7 +5348,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "charging": {
@@ -5365,7 +5365,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "server": {
@@ -5383,7 +5383,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "feel": {
@@ -5402,7 +5402,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "return_policy": {
@@ -5419,7 +5419,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "bottom_of_the_computer": {
@@ -5436,7 +5436,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "noises": {
@@ -5453,7 +5453,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "hinges": {
@@ -5470,7 +5470,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "high_definition_quality": {
@@ -5487,7 +5487,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "looks": {
@@ -5504,7 +5504,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "iworks": {
@@ -5521,7 +5521,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "ms_office": {
@@ -5538,7 +5538,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "set_up": {
@@ -5555,7 +5555,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "gaming_look": {
@@ -5572,7 +5572,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "delivered": {
@@ -5589,7 +5589,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "gaming_performance": {
@@ -5606,7 +5606,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "internet_connection": {
@@ -5623,7 +5623,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "charges": {
@@ -5640,7 +5640,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "games": {
@@ -5658,7 +5658,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "service_center": {
@@ -5675,7 +5675,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "guy": {
@@ -5692,7 +5692,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "tech_guy": {
@@ -5709,7 +5709,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "ram": {
@@ -5727,7 +5727,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "phone_assistance": {
@@ -5744,7 +5744,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "paint": {
@@ -5761,7 +5761,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "type": {
@@ -5779,7 +5779,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "acer_screen": {
@@ -5796,7 +5796,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "usb_port": {
@@ -5813,7 +5813,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "functionality": {
@@ -5830,7 +5830,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "wall_charger": {
@@ -5847,7 +5847,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "presentations": {
@@ -5864,7 +5864,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "hdd_bays": {
@@ -5881,7 +5881,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "16gb_ram_support": {
@@ -5898,7 +5898,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "recovey_disk": {
@@ -5915,7 +5915,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "recovery_disk": {
@@ -5932,7 +5932,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "navigate": {
@@ -5949,7 +5949,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "2_gb_of_ram": {
@@ -5966,7 +5966,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "stand": {
@@ -5983,7 +5983,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "13_inch": {
@@ -6000,7 +6000,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "intel": {
@@ -6017,7 +6017,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "edges": {
@@ -6034,7 +6034,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "media": {
@@ -6051,7 +6051,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "speeds": {
@@ -6068,7 +6068,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "win_7_home": {
@@ -6085,7 +6085,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "win_7": {
@@ -6102,7 +6102,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "brand": {
@@ -6119,7 +6119,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "view": {
@@ -6136,7 +6136,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "places": {
@@ -6153,7 +6153,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "designed": {
@@ -6170,7 +6170,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "services": {
@@ -6187,7 +6187,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "customer_services": {
@@ -6204,7 +6204,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "application": {
@@ -6221,7 +6221,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "boot_camp": {
@@ -6238,7 +6238,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "cpu": {
@@ -6255,7 +6255,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "snow_leopard": {
@@ -6272,7 +6272,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "excel": {
@@ -6289,7 +6289,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "spinning_wheel": {
@@ -6306,7 +6306,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "wireless_switch": {
@@ -6323,7 +6323,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "switch": {
@@ -6340,7 +6340,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "engineering_design": {
@@ -6357,7 +6357,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "upgraded_memory": {
@@ -6374,7 +6374,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "image": {
@@ -6392,7 +6392,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "soud": {
@@ -6409,7 +6409,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "built_in_webcam": {
@@ -6426,7 +6426,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "mic": {
@@ -6443,7 +6443,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "built_in_mic": {
@@ -6460,7 +6460,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "lid": {
@@ -6477,7 +6477,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "cam": {
@@ -6494,7 +6494,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "button_below_the_mouse_pad": {
@@ -6511,7 +6511,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "mouse_pad": {
@@ -6528,7 +6528,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "home_use": {
@@ -6545,7 +6545,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "business_use": {
@@ -6562,7 +6562,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "images": {
@@ -6579,7 +6579,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "company": {
@@ -6597,7 +6597,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "board": {
@@ -6614,7 +6614,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "mother_board": {
@@ -6631,7 +6631,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "dvd_drive": {
@@ -6648,7 +6648,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "rma_service": {
@@ -6666,7 +6666,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "customer_service": {
@@ -6683,7 +6683,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "web_cam": {
@@ -6700,7 +6700,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "people": {
@@ -6717,7 +6717,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "beauty": {
@@ -6734,7 +6734,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "monitor": {
@@ -6751,7 +6751,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "external_monitor": {
@@ -6768,7 +6768,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "starting_up_time": {
@@ -6785,7 +6785,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "plate": {
@@ -6802,7 +6802,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "ibook": {
@@ -6819,7 +6819,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "ibook_backup": {
@@ -6836,7 +6836,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "firewire_connection": {
@@ -6853,7 +6853,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "product_key": {
@@ -6870,7 +6870,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "start_up": {
@@ -6887,7 +6887,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "disk_image": {
@@ -6904,7 +6904,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "environment": {
@@ -6921,7 +6921,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "brightness": {
@@ -6938,7 +6938,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "area": {
@@ -6955,7 +6955,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "mouse_cable": {
@@ -6972,7 +6972,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "plug": {
@@ -6989,7 +6989,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "build": {
@@ -7006,7 +7006,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "pentium_4": {
@@ -7023,7 +7023,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "1_gb_ram": {
@@ -7040,7 +7040,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "machined_aluminum_frame": {
@@ -7057,7 +7057,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "frame": {
@@ -7074,7 +7074,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "update": {
@@ -7091,7 +7091,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "17\"_inch_screen": {
@@ -7108,7 +7108,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "surface": {
@@ -7125,7 +7125,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "price_point": {
@@ -7142,7 +7142,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "appearance": {
@@ -7159,7 +7159,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "boots_up": {
@@ -7176,7 +7176,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "facial_recognition": {
@@ -7193,7 +7193,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "rubber_enclosure": {
@@ -7210,7 +7210,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "shift_key": {
@@ -7227,7 +7227,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "lines": {
@@ -7244,7 +7244,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "sd_memory_card_reader": {
@@ -7261,7 +7261,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "sd_memory_car_expansion": {
@@ -7278,7 +7278,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "repair_service": {
@@ -7295,7 +7295,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "norton": {
@@ -7312,7 +7312,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "regular_layout_keyboard": {
@@ -7329,7 +7329,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "layout": {
@@ -7346,7 +7346,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "openoffice": {
@@ -7363,7 +7363,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "intel_built_in_card": {
@@ -7380,7 +7380,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "mouse_pointer": {
@@ -7397,7 +7397,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "pointer": {
@@ -7414,7 +7414,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "hard_reboot": {
@@ -7431,7 +7431,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "uninstall": {
@@ -7448,7 +7448,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "surfing": {
@@ -7465,7 +7465,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       },
       "quad_core_i7": {
@@ -7482,7 +7482,7 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       }
     },
@@ -7527,17 +7527,17 @@
           "waitstaff",
           "we waited."
         ],
-        "support_count": 3624,
+        "support_count": 3728,
         "stability_score": 1.0,
         "sentiment_profile": {
-          "positive": 1456,
-          "neutral": 1641,
-          "negative": 550
+          "positive": 1496,
+          "neutral": 1705,
+          "negative": 554
         },
         "first_seen": "2026-04-08T19:33:19Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 23,
+        "seen_runs": 27,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -7610,17 +7610,17 @@
           "wine.",
           "yummy"
         ],
-        "support_count": 4070,
+        "support_count": 4266,
         "stability_score": 1.0,
         "sentiment_profile": {
-          "positive": 1737,
-          "neutral": 1992,
-          "negative": 373
+          "positive": 1861,
+          "neutral": 2048,
+          "negative": 393
         },
         "first_seen": "2026-04-08T19:33:19Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 32,
+        "seen_runs": 36,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -7660,17 +7660,17 @@
           "space",
           "uncomfortable"
         ],
-        "support_count": 664,
+        "support_count": 684,
         "stability_score": 1.0,
         "sentiment_profile": {
-          "negative": 76,
-          "neutral": 392,
-          "positive": 205
+          "negative": 80,
+          "neutral": 408,
+          "positive": 209
         },
         "first_seen": "2026-04-08T19:33:19Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 9,
+        "seen_runs": 13,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -7709,17 +7709,17 @@
           "value",
           "worth"
         ],
-        "support_count": 1017,
+        "support_count": 1025,
         "stability_score": 1.0,
         "sentiment_profile": {
-          "neutral": 563,
+          "neutral": 575,
           "negative": 186,
           "positive": 274
         },
         "first_seen": "2026-04-08T19:33:19Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 6,
+        "seen_runs": 10,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -7737,17 +7737,17 @@
           "wait",
           "waiting"
         ],
-        "support_count": 110,
+        "support_count": 122,
         "stability_score": 1.0,
         "sentiment_profile": {
-          "neutral": 99,
-          "positive": 24,
+          "neutral": 111,
+          "positive": 28,
           "negative": 11
         },
         "first_seen": "2026-04-09T05:24:16Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 24,
+        "seen_runs": 28,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -7775,17 +7775,17 @@
           "worth",
           "you get what you pay for"
         ],
-        "support_count": 122,
+        "support_count": 146,
         "stability_score": 1.0,
         "sentiment_profile": {
           "negative": 18,
-          "neutral": 76,
-          "positive": 33
+          "neutral": 100,
+          "positive": 37
         },
         "first_seen": "2026-04-09T05:24:16Z",
-        "last_seen": "2026-04-09T16:10:17Z",
+        "last_seen": "2026-04-11T16:09:02Z",
         "status": "promoted",
-        "seen_runs": 5,
+        "seen_runs": 9,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -7797,17 +7797,17 @@
           "messy",
           "smell"
         ],
-        "support_count": 14,
-        "stability_score": 0.28,
+        "support_count": 22,
+        "stability_score": 0.44,
         "sentiment_profile": {
-          "positive": 15,
+          "positive": 27,
           "negative": 2,
           "neutral": 1
         },
         "first_seen": "2026-04-09T05:24:16Z",
-        "last_seen": "2026-04-09T16:10:17Z",
-        "status": "deprecated",
-        "seen_runs": 4,
+        "last_seen": "2026-04-11T16:09:02Z",
+        "status": "candidate",
+        "seen_runs": 8,
         "missing_runs": 0,
         "version": "v1"
       },
@@ -7826,13 +7826,13 @@
         "last_seen": "2026-04-09T16:10:17Z",
         "status": "candidate",
         "seen_runs": 1,
-        "missing_runs": 0,
+        "missing_runs": 4,
         "version": "v1"
       }
     }
   },
   "history": {
-    "runs_seen": 52
+    "runs_seen": 56
   },
-  "updated_at": "2026-04-09T16:10:17Z"
+  "updated_at": "2026-04-11T16:09:02Z"
 }

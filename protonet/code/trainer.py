@@ -247,7 +247,6 @@ def _episode_loss_with_weights(
         for idx, label in enumerate(out.ordered_labels):
             ce_weights[idx] = float(class_weight_lookup.get(label, 1.0))
         
-        # Change 17: Focal Loss
         gamma = cfg.focal_gamma if hasattr(cfg, "focal_gamma") else 2.0
         loss = _focal_loss(out.logits, out.targets, alpha=ce_weights, gamma=gamma)
         
@@ -371,13 +370,11 @@ def train_model(cfg: ProtonetConfig, episodes_by_split: Dict[str, List[Dict[str,
                 announce(f"[train] early stopping at epoch {epoch} (patience={cfg.patience})")
                 break
 
-    # Final comprehensive evaluation including protocol-specific sets
     load_checkpoint(model, checkpoint_path)
     
     val_metrics, _ = evaluate_episodes(model, episodes_by_split["val"], cfg, "val")
     test_metrics, _ = evaluate_episodes(model, episodes_by_split["test"], cfg, "test")
     
-    # Change 15: Protocol-specific evaluation
     protocol_metrics: Dict[str, Any] = {}
     for key, episodes in episodes_by_split.items():
         if "__" in key and (key.startswith("val") or key.startswith("test")):

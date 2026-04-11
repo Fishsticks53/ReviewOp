@@ -15,10 +15,10 @@ PROTONET_CODE_DIR = ROOT / "protonet" / "code"
 if str(PROTONET_CODE_DIR) not in sys.path:
     sys.path.insert(0, str(PROTONET_CODE_DIR))
 
-from implicit_pipeline import build_implicit_row  # noqa: E402
+from implicit_pipeline import VectorAspectMatcher, build_implicit_row  # noqa: E402
 from implicit_pipeline import discover_aspects  # noqa: E402
 from implicit_pipeline import infer_sentiment_details  # noqa: E402
-from build_dataset import _benchmark_v2_novelty_sidecar, _build_benchmark_instances, _build_quality_analysis_artifact, _group_identity, _safe_absolute_span, build_parser  # noqa: E402
+from build_dataset import _benchmark_v2_novelty_sidecar, _build_benchmark_instances, _build_quality_analysis_artifact, _enforce_benchmark_family_floor, _group_identity, _safe_absolute_span, build_parser  # noqa: E402
 from build_dataset import _merge_gold_labels  # noqa: E402
 from build_dataset import _select_working_rows, _split_train_review_filter, _strict_topup_recovery, _train_floor_row_passes  # noqa: E402
 from build_dataset import run_pipeline  # noqa: E402
@@ -93,6 +93,19 @@ class V6RepairTests(unittest.TestCase):
             self.assertIn("evidence_text", span)
             self.assertIn("evidence_span", span)
             self.assertEqual(len(span["evidence_span"]), 2)
+
+    def test_vector_aspect_matcher_prefers_cuda_when_available(self) -> None:
+        with patch("implicit_pipeline.torch.cuda.is_available", return_value=True), patch("implicit_pipeline.SentenceTransformer") as mocked_model:
+            matcher = VectorAspectMatcher("mini")
+            self.assertEqual(matcher.device, "cuda")
+            mocked_model.assert_called_once()
+            self.assertEqual(mocked_model.call_args.kwargs.get("device"), "cuda")
+
+        with patch("implicit_pipeline.torch.cuda.is_available", return_value=False), patch("implicit_pipeline.SentenceTransformer") as mocked_model:
+            matcher = VectorAspectMatcher("mini")
+            self.assertEqual(matcher.device, "cpu")
+            mocked_model.assert_called_once()
+            self.assertEqual(mocked_model.call_args.kwargs.get("device"), "cpu")
 
     def test_benchmark_dedup_and_grounding(self) -> None:
         row = {
@@ -465,6 +478,54 @@ class V6RepairTests(unittest.TestCase):
         self.assertEqual(metadata["hardness_distribution"]["H2"], 2)
         self.assertGreater(metadata["abstain_acceptable_rate"], 0.0)
         self.assertEqual(len(flat_rows), 3)
+
+    def test_debug_benchmark_family_floor_restores_missing_core_family(self) -> None:
+        rows_by_split = {
+            "train": [
+                {
+                    "instance_id": "bench-elec",
+                    "domain": "laptop",
+                    "source_text": "Battery dies before evening.",
+                    "domain_family": "electronics",
+                    "group_id": "g1",
+                    "gold_interpretations": [{"aspect_label": "battery", "sentiment": "negative", "evidence_text": "Battery dies before evening"}],
+                    "implicit_grounded_interpretations": [{"aspect_label": "battery", "sentiment": "negative", "evidence_text": "Battery dies before evening"}],
+                    "explicit_grounded_interpretations": [],
+                    "hardness_tier": "H2",
+                    "split_protocol": {"random": "train", "grouped": "train", "domain_holdout": "train"},
+                }
+            ],
+            "val": [],
+            "test": [],
+        }
+        fallback_rows_by_family = {
+            "telecom": [
+                {
+                    "instance_id": "bench-tel",
+                    "domain": "telecom",
+                    "source_text": "Signal drops indoors.",
+                    "domain_family": "telecom",
+                    "group_id": "g2",
+                    "gold_interpretations": [{"aspect_label": "connectivity", "sentiment": "negative", "evidence_text": "Signal drops indoors"}],
+                    "implicit_grounded_interpretations": [{"aspect_label": "connectivity", "sentiment": "negative", "evidence_text": "Signal drops indoors"}],
+                    "explicit_grounded_interpretations": [],
+                    "hardness_tier": "H3",
+                    "split_protocol": {"random": "train", "grouped": "train", "domain_holdout": "train"},
+                    "split": "train",
+                }
+            ]
+        }
+        stats = _enforce_benchmark_family_floor(
+            rows_by_split,
+            source_domain_family_counts={"electronics": 1, "restaurant": 0, "telecom": 1},
+            fallback_rows_by_family=fallback_rows_by_family,
+            artifact_mode="debug_artifacts",
+            seed=7,
+        )
+        self.assertTrue(stats["applied"])
+        self.assertIn("telecom", stats["restored_families"])
+        flat_rows = [row for split_rows in rows_by_split.values() for row in split_rows]
+        self.assertEqual({row["domain_family"] for row in flat_rows}, {"electronics", "telecom"})
 
     def test_train_floor_row_passes_for_grounded_non_general_row(self) -> None:
         row = {

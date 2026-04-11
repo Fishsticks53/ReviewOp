@@ -50,7 +50,6 @@ class ProtonetConfig:
     predictions_dir: Path = OUTPUT_ROOT / "predictions"
 
     encoder_backend: str = "auto"
-    # Fast options: "microsoft/deberta-v3-small" (44M params) or "distilbert-base-uncased" (66M params)
     encoder_model_name: str = _env_value("REVIEWOP_PROTONET_ENCODER_MODEL", "PROTONET_ENCODER_MODEL", default="microsoft/deberta-v3-base") or "microsoft/deberta-v3-base"
     bow_dim: int = 512
     max_length: int = 160
@@ -67,15 +66,15 @@ class ProtonetConfig:
     protocol_eval_splits: tuple[str, ...] = ("random", "grouped", "domain_holdout")
 
     warmup_epochs: int = 1
-    epochs: int = 12
-    patience: int = 4
+    epochs: int = 8
+    patience: int = 3
     learning_rate: float = 5e-4
     encoder_learning_rate: float = 1e-5
     weight_decay: float = 2e-4
     gradient_accumulation_steps: int = 2
     batch_size_hint: int = 1
     use_amp: bool = True
-    contrastive_weight: float = 0.3
+    contrastive_weight: float = 0.15
     prototype_smoothing: float = 0.05
     low_confidence_threshold: float = 0.55
     top_k_debug: int = 3

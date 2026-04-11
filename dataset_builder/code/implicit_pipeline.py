@@ -6,6 +6,7 @@ import math
 import re
 from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
+import torch
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -137,7 +138,8 @@ class VectorAspectMatcher:
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
         # We use local_files_only=True if we expect them to be pre-downloaded, 
         # but for builder we'll let it download if needed (assuming connection)
-        self.model = SentenceTransformer(model_name)
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model = SentenceTransformer(model_name, device=self.device)
         self.centroids: Dict[str, np.ndarray] = {}
         self._initialize_centroids()
 

@@ -47,5 +47,7 @@ dataset_builder/zip
 datasets/
 .agents
 .claude
+.flash/
+.vscode/
 *.csv
 skills-lock.json

@@ -24,8 +24,8 @@ class LlmProvider(ABC):
 
 class RunPodProvider(LlmProvider):
     def __init__(self, api_key: str | None = None, base_url: str | None = None):
-        self.api_key = api_key or _env_value("RUNPOD_API_KEY")
-        self.base_url = base_url or _env_value("RUNPOD_ENDPOINT_URL")
+        self.api_key = api_key or _env_value("REVIEWOP_RUNPOD_API_KEY", "RUNPOD_API_KEY")
+        self.base_url = base_url or _env_value("REVIEWOP_RUNPOD_ENDPOINT_URL", "RUNPOD_ENDPOINT_URL")
         self.session = requests.Session()
         if self.api_key:
             self.session.headers.update({
@@ -129,8 +129,8 @@ class AsyncLlmProvider(ABC):
 
 class AsyncRunPodProvider(AsyncLlmProvider):
     def __init__(self, api_key: str | None = None, base_url: str | None = None):
-        self.api_key = api_key or _env_value("RUNPOD_API_KEY")
-        self.base_url = base_url or _env_value("RUNPOD_ENDPOINT_URL")
+        self.api_key = api_key or _env_value("REVIEWOP_RUNPOD_API_KEY", "RUNPOD_API_KEY")
+        self.base_url = base_url or _env_value("REVIEWOP_RUNPOD_ENDPOINT_URL", "RUNPOD_ENDPOINT_URL")
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
@@ -138,8 +138,8 @@ class AsyncRunPodProvider(AsyncLlmProvider):
 
     async def generate(self, prompt: str, model_name: str, **kwargs) -> str:
         # Late-bind the endpoint and key to ensure .env updates reflect in long-running processes
-        self.api_key = self.api_key or _env_value("RUNPOD_API_KEY")
-        self.base_url = self.base_url or _env_value("RUNPOD_ENDPOINT_URL")
+        self.api_key = self.api_key or _env_value("REVIEWOP_RUNPOD_API_KEY", "RUNPOD_API_KEY")
+        self.base_url = self.base_url or _env_value("REVIEWOP_RUNPOD_ENDPOINT_URL", "RUNPOD_ENDPOINT_URL")
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -386,8 +386,8 @@ def resolve_processor_async_provider(processor_name: str | None, model_name: str
 
 
 def discover_best_provider() -> Tuple[str, Optional[str], Optional[str]]:
-    runpod_key = _env_value("RUNPOD_API_KEY")
-    runpod_url = _env_value("RUNPOD_ENDPOINT_URL")
+    runpod_key = _env_value("REVIEWOP_RUNPOD_API_KEY", "RUNPOD_API_KEY")
+    runpod_url = _env_value("REVIEWOP_RUNPOD_ENDPOINT_URL", "RUNPOD_ENDPOINT_URL")
     if runpod_key and runpod_url:
         return "runpod", runpod_key, runpod_url
     claude_key = _env_value("CLAUDE_API_KEY")

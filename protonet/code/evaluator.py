@@ -276,7 +276,6 @@ def evaluate_episodes(model, episodes: List[Dict[str, Any]], cfg: ProtonetConfig
                     ambiguity_score = max(0.0, min(1.0, 1.0 - (p_top1 - p_top2)))
                     energy_raw = float((-eval_temperature * torch.logsumexp(row_logits, dim=0)).item())
                     energy_score = max(0.0, min(1.0, (energy_raw + 5.0) / 10.0))
-                    # Change 21: Improved novelty scoring (re-weighted to sum to 1.0)
                     novelty_score = max(
                         0.0,
                         min(

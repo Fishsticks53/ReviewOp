@@ -4,6 +4,7 @@ import argparse
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
+import asyncio
 import json
 import os
 import random
@@ -34,7 +35,6 @@ from implicit_pipeline import (
     collect_diagnostics,
     discover_aspects,
     MultiAspectSynthesis,
-    ResearchAblationMatrix,
     flush_llm_cache,
 )
 from io_utils import load_gold_annotations, load_inputs
@@ -109,12 +109,10 @@ class _ProgressTracker:
 
 
 def _assign_ids(frame: pd.DataFrame) -> pd.DataFrame:
-    # Optimized: Vectorized ID generation where possible
     out = frame.copy()
     if "source_file" not in out.columns:
         out["source_file"] = "unknown"
-    
-    # We use a helper to avoid per-row to_dict conversion
+
     def get_row_id(row_tuple):
         return stable_id(row_tuple.source_file, row_tuple.Index, str(row_tuple))
 
@@ -2397,6 +2395,42 @@ def _apply_benchmark_balance_policy(rows_by_split: dict[str, list[dict[str, Any]
     return {"train_rows_before": len(train_rows), "train_rows_after": len(balanced)}
 
 
+def _enforce_benchmark_family_floor(
+    rows_by_split: dict[str, list[dict[str, Any]]],
+    *,
+    source_domain_family_counts: dict[str, int],
+    fallback_rows_by_family: dict[str, list[dict[str, Any]]],
+    artifact_mode: str,
+    seed: int,
+) -> dict[str, Any]:
+    if artifact_mode != "debug_artifacts":
+        return {"applied": False, "restored_rows": 0, "restored_families": []}
+
+    all_rows = [row for split_rows in rows_by_split.values() for row in split_rows]
+    current_families = {
+        _benchmark_domain_family(str(_get_row_domain(row)))
+        for row in all_rows
+    }
+    restored_families: list[str] = []
+    restored_rows = 0
+    for family in _CORE_BENCHMARK_DOMAINS:
+        if int(source_domain_family_counts.get(family, 0)) <= 0:
+            continue
+        if family in current_families:
+            continue
+        candidates = list(fallback_rows_by_family.get(family, []))
+        if not candidates:
+            continue
+        chosen = _stable_keep(candidates, seed=seed, token=f"benchmark-family-floor:{family}", limit=1)[0]
+        target_split = "val" if not rows_by_split.get("val") else ("test" if not rows_by_split.get("test") else "train")
+        rows_by_split.setdefault(target_split, []).append(chosen)
+        current_families.add(family)
+        restored_families.append(family)
+        restored_rows += 1
+
+    return {"applied": bool(restored_rows), "restored_rows": restored_rows, "restored_families": restored_families}
+
+
 def _export_protocol_views(
     rows_by_split: dict[str, list[dict[str, Any]]],
 ) -> dict[str, dict[str, list[dict[str, Any]]]]:
@@ -2482,6 +2516,7 @@ def _build_benchmark_instances(
     total_interpretations = 0
     grounded_interpretations = 0
     duplicate_interpretations_removed = 0
+    duplicate_logical_rows_removed = 0
     thermal_interpretations = 0
     val_guard_triggered = False
     deferred_review_rows: list[dict[str, Any]] = []
@@ -2491,9 +2526,11 @@ def _build_benchmark_instances(
     explicit_interpretation_count = 0
     fallback_only_implicit_count = 0
     ontology_compatible_count = 0
+    seen_logical_rows: set[tuple[str, str, str, tuple[tuple[str, str, str], ...]]] = set()
     source_domain_family_counts: Counter[str] = Counter(_benchmark_domain_family(str(_get_row_domain(row))) for row in selected_rows)
     benchmark_domain_family_counts: Counter[str] = Counter()
     benchmark_hardness_counts: Counter[str] = Counter()
+    family_floor_fallbacks: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
     for row in selected_rows:
         row_id = str(row.get("id") or "")
@@ -2601,6 +2638,110 @@ def _build_benchmark_instances(
             )
             continue
 
+        implicit_grounded = [
+            item
+            for item in gold_interpretations
+            if str(item.get("evidence_mode") or "implicit").lower() == "implicit"
+            and bool(item.get("implicit_eligible", True))
+        ]
+        explicit_grounded = [
+            item
+            for item in gold_interpretations
+            if str(item.get("evidence_mode") or "implicit").lower() == "explicit"
+        ]
+        if not implicit_grounded:
+            deferred_review_rows.append(
+                {
+                    "instance_id": row_id,
+                    "record_id": row_id,
+                    "review_text": review_text,
+                    "domain": str(row.get("domain") or "unknown"),
+                    "group_id": _group_identity(row),
+                    "reason": "explicit_only_or_unusable_benchmark_row",
+                    "annotation_source": "draft_queue",
+                    "review_status": "pending",
+                    "split_protocol": {
+                        "random": random_split,
+                        "grouped": str(split_protocol.get("grouped") or random_split),
+                        "domain_holdout": str(split_protocol.get("domain_holdout") or random_split),
+                    },
+                    "novel_acceptable": bool(row.get("novel_acceptable", False)),
+                    "novel_cluster_id": row.get("novel_cluster_id"),
+                    "novel_alias": row.get("novel_alias"),
+                    "novel_evidence_text": row.get("novel_evidence_text"),
+                }
+            )
+            continue
+
+        logical_signature = tuple(
+            sorted(
+                (
+                    str(item.get("aspect_label") or item.get("aspect") or "").strip().lower(),
+                    str(item.get("sentiment") or "neutral").strip().lower(),
+                    _normalize_evidence_text(str(item.get("evidence_text") or item.get("evidence") or "")),
+                )
+                for item in gold_interpretations
+            )
+        )
+        logical_row_key = (
+            _normalize_evidence_text(review_text),
+            str(row.get("domain_family") or _benchmark_domain_family(str(_get_row_domain(row)))),
+            _group_identity(row),
+            logical_signature,
+        )
+        if logical_row_key in seen_logical_rows:
+            duplicate_logical_rows_removed += 1
+            family_floor_fallbacks[_benchmark_domain_family(str(_get_row_domain(row)))].append(
+                {
+                    "instance_id": row_id,
+                    "record_id": row_id,
+                    "review_text": review_text,
+                    "domain": str(row.get("domain") or "unknown"),
+                    "domain_family": _benchmark_domain_family(str(_get_row_domain(row))),
+                    "group_id": _group_identity(row),
+                    "gold_interpretations": gold_interpretations,
+                    "implicit_grounded_interpretations": implicit_grounded,
+                    "explicit_grounded_interpretations": explicit_grounded,
+                    "abstain_acceptable": bool(row.get("abstain_acceptable", False)),
+                    "novel_acceptable": novel_acceptable,
+                    "novel_cluster_id": novel_cluster_id,
+                    "novel_alias": novel_alias,
+                    "novel_evidence_text": novel_evidence_text or None,
+                    "ambiguity_score": _ambiguity_score(row, gold_interpretations),
+                    "hardness_tier": str(row.get("implicit", {}).get("hardness_tier") or "unknown"),
+                    "annotation_source": "benchmark_generated" if any(str(item.get("source") or item.get("annotation_source") or "").strip() in {"rule", "synthetic"} for item in gold_interpretations) else "imported",
+                    "split_protocol": {
+                        "random": random_split,
+                        "grouped": str(split_protocol.get("grouped") or random_split),
+                        "domain_holdout": str(split_protocol.get("domain_holdout") or random_split),
+                    },
+                    "split": random_split,
+                }
+            )
+            deferred_review_rows.append(
+                {
+                    "instance_id": row_id,
+                    "record_id": row_id,
+                    "review_text": review_text,
+                    "domain": str(row.get("domain") or "unknown"),
+                    "group_id": _group_identity(row),
+                    "reason": "duplicate_logical_benchmark_row",
+                    "annotation_source": "draft_queue",
+                    "review_status": "pending",
+                    "split_protocol": {
+                        "random": random_split,
+                        "grouped": str(split_protocol.get("grouped") or random_split),
+                        "domain_holdout": str(split_protocol.get("domain_holdout") or random_split),
+                    },
+                    "novel_acceptable": bool(row.get("novel_acceptable", False)),
+                    "novel_cluster_id": row.get("novel_cluster_id"),
+                    "novel_alias": row.get("novel_alias"),
+                    "novel_evidence_text": row.get("novel_evidence_text"),
+                }
+            )
+            continue
+        seen_logical_rows.add(logical_row_key)
+
         novel_acceptable = bool(row.get("novel_acceptable", False))
         novel_evidence_text = str(row.get("novel_evidence_text") or "").strip()
         if not novel_evidence_text and novel_acceptable:
@@ -2629,15 +2770,8 @@ def _build_benchmark_instances(
             "domain_family": _benchmark_domain_family(str(_get_row_domain(row))),
             "group_id": _group_identity(row),
             "gold_interpretations": gold_interpretations,
-            "implicit_grounded_interpretations": [
-                item for item in gold_interpretations
-                if str(item.get("evidence_mode") or "implicit").lower() == "implicit"
-                and bool(item.get("implicit_eligible", True))
-            ],
-            "explicit_grounded_interpretations": [
-                item for item in gold_interpretations
-                if str(item.get("evidence_mode") or "implicit").lower() == "explicit"
-            ],
+            "implicit_grounded_interpretations": implicit_grounded,
+            "explicit_grounded_interpretations": explicit_grounded,
             "abstain_acceptable": bool(row.get("abstain_acceptable", False)),
             "novel_acceptable": novel_acceptable,
             "novel_cluster_id": novel_cluster_id,
@@ -2672,6 +2806,13 @@ def _build_benchmark_instances(
     leakage_rows = [{"split": split, "group_id": row.get("group_id", "unknown")} for split, rows_split in benchmark_rows_by_split.items() for row in rows_split]
     novelty_stats = _assign_novelty_flags(benchmark_rows_by_split)
     balance_stats = _apply_benchmark_balance_policy(benchmark_rows_by_split, seed=seed)
+    family_floor_stats = _enforce_benchmark_family_floor(
+        benchmark_rows_by_split,
+        source_domain_family_counts={domain: int(source_domain_family_counts.get(domain, 0)) for domain in _CORE_BENCHMARK_DOMAINS},
+        fallback_rows_by_family=family_floor_fallbacks,
+        artifact_mode=artifact_mode,
+        seed=seed,
+    )
     split_counts = {split: len(rows_split) for split, rows_split in benchmark_rows_by_split.items()}
     leakage_rows = [{"split": split, "group_id": row.get("group_id", "unknown")} for split, rows_split in benchmark_rows_by_split.items() for row in rows_split]
     all_bench = [r for s in benchmark_rows_by_split.values() for r in s]
@@ -2716,6 +2857,7 @@ def _build_benchmark_instances(
         },
         "novelty_assignment": novelty_stats,
         "balance_policy": balance_stats,
+        "family_floor_policy": family_floor_stats,
         "grounded_evidence_rate": round(grounded_interpretations / max(1, total_interpretations), 4),
         "duplicate_interpretations_removed": int(duplicate_interpretations_removed),
         "duplicate_interpretation_rate": round(duplicate_interpretations_removed / max(1, total_interpretations), 4),
@@ -2726,6 +2868,8 @@ def _build_benchmark_instances(
         "fallback_only_implicit_rate": round(fallback_only_implicit_count / max(1, implicit_interpretation_count), 4),
         "ontology_compatibility_rate": round(ontology_compatible_count / max(1, total_interpretations), 4),
         "duplicate_logical_row_rate": round((len(selected_rows) - len(all_bench)) / max(1, len(selected_rows)), 4),
+        "duplicate_logical_rows_removed": int(duplicate_logical_rows_removed),
+        "duplicate_logical_row_rate_adjusted": round(duplicate_logical_rows_removed / max(1, len(selected_rows)), 4),
         "validation_empty_guard_triggered": bool(val_guard_triggered),
         "thermal_share": round(thermal_interpretations / max(1, total_interpretations), 4),
         "interpretation_source_distribution": dict(interpretation_source_counter),
@@ -3012,7 +3156,8 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
     
     # LLM Provider Connectivity Smoke Test
     if llm_provider and cfg.no_llm_cache:
-        provider_display = str(cfg.llm_provider).capitalize()
+        provider_name = str(cfg.llm_provider or cfg.processor or "provider").strip().lower()
+        provider_display = "RunPod" if provider_name == "runpod" else provider_name.capitalize()
         try:
             print(f"\n[!] Performing {provider_display} Connectivity Smoke Test...")
             smoke_res = await llm_provider.generate("ping", cfg.llm_model_name, bypass_cache=True)
@@ -3021,15 +3166,14 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
             print(f"[+] {provider_display} Connectivity Verified.")
         except Exception as e:
             print(f"[!] Warning: {provider_display} connectivity probe failed: {e}")
-            p_name = str(cfg.llm_provider).lower()
-            if p_name == "openai":
+            if provider_name == "openai":
                 print("    Check your OPENAI_API_KEY in your .env file.")
-            elif p_name in {"claude", "anthropic"}:
+            elif provider_name in {"claude", "anthropic"}:
                 print("    Check your CLAUDE_API_KEY in your .env file.")
-            elif p_name == "runpod":
+            elif provider_name == "runpod":
                 print("    Check your RUNPOD_API_KEY and RUNPOD_ENDPOINT_URL in your .env file.")
             else:
-                print(f"    Check your {p_name.upper()}_API_KEY in your .env file.")
+                print(f"    Check your {provider_name.upper()}_API_KEY in your .env file.")
             llm_provider = None
     
     frame = load_inputs(cfg.input_dir)
@@ -3042,22 +3186,17 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
         raise ValueError("No text column detected")
 
     prepared = _prepare_rows(frame, cfg, text_column, progress_tracker=progress)
-    print(f"\n[DEBUG] Text Column: {text_column}")
     if prepared.empty:
         raise ValueError("No rows available after preprocessing")
     
     gold_annotations_path = cfg.gold_annotations_path or (cfg.input_dir / "gold_annotations.jsonl")
     gold_annotations = load_gold_annotations(gold_annotations_path) if gold_annotations_path else []
     
-    # Adaptive Lexicon Stage (Phase 1)
-    print(f"\n[!] Adaptive Lexicon: Harvesting aspects from {len(frame)} input rows...")
     harvested_rules = _harvest_dataset_aspects(frame)
     if harvested_rules:
         from implicit_pipeline import inject_harvested_rules
         inject_harvested_rules(harvested_rules)
-        print(f"[+] Injected {len(harvested_rules)} new rules from dataset vocabulary.")
     
-    # Persistent Discovery Loop (Phase 3)
     from aspect_registry import LearnedOntologyManager
     ontology_manager = LearnedOntologyManager.get_instance(cfg.state_dir)
     domains = frame["domain"].dropna().unique()
@@ -3069,13 +3208,8 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
     if promoted_discovered:
         from implicit_pipeline import inject_harvested_rules
         inject_harvested_rules(promoted_discovered)
-        print(f"[+] Phase 3 Learning Loop: Injected {len(promoted_discovered)} previously promoted aspects from state.")
-    
+
     progress.step("input load/schema detect")
-    print(f"\n[DEBUG] Rows loaded: {len(frame)}")
-    print(f"[DEBUG] Rows prepared: {len(prepared)}")
-    if not prepared.empty:
-        print(f"[DEBUG] Domain distribution in prepared:\n{prepared['domain'].value_counts()}")
 
     working_rows = _select_working_rows(prepared.to_dict(orient="records"), cfg)
     if not working_rows:
@@ -3147,7 +3281,6 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
     artifacts = fit_explicit_artifacts(train_frame, feature_numeric_columns, feature_categorical_columns)
 
     async def build_split(rows: list[dict[str, Any]], split_name: str, domain_conditioning_mode: str) -> list[dict[str, Any]]:
-        import asyncio
         if not rows: return []
         
         sem = asyncio.Semaphore(cfg.max_workers)
@@ -3189,8 +3322,6 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
 
 
         
-    # Optimized build_split (now using Semaphore/AsyncIO)
-
     train_built = await build_split(train_rows, "train", train_domain_conditioning_mode)
     val_built = await build_split(val_rows, "val", eval_domain_conditioning_mode)
     test_built = await build_split(test_rows, "test", eval_domain_conditioning_mode)
@@ -3202,9 +3333,7 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
     val_built = [row for row in finalized_rows if row.get("split") == "val"]
     test_built = [row for row in finalized_rows if row.get("split") == "test"]
 
-    # Phase 3: Persistent Observation & Semantic Merging
     if cfg.discovery_mode:
-        print("\n[!] Phase 3 Learning Loop: Recording new discoveries...")
         for row in finalized_rows:
             dom = row.get("domain", "unknown")
             implicit = row.get("implicit", {})
@@ -3219,7 +3348,6 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
                         stability_threshold=cfg.discovery_stability_threshold
                     )
         
-        # Semantic Merging
         from implicit_pipeline import VectorAspectMatcher
         matcher = VectorAspectMatcher.get_instance()
         def sim_func(a, b):
@@ -3231,27 +3359,24 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
         for dom in domains:
             ontology_manager.merge_similar(domain=dom, similarity_func=sim_func, threshold=0.85)
 
-    # Stage B/C: Reasoning-Augmented Recovery
     if cfg.enable_reasoned_recovery and llm_provider:
         progress.step("reasoned recovery (synthesis)", 0)
         synthesis = MultiAspectSynthesis(llm_provider)
-        
-        # Identity-based reasoned selection
-        matrix = ResearchAblationMatrix(run_profile=run_profile)
-        
+
         to_recover = [
             row for row in train_built 
             if bool(row.get("implicit", {}).get("needs_review")) 
             and str(row.get("implicit", {}).get("review_reason") or "") in {"weak_support", "low_confidence", "fallback_general"}
         ]
-        
+
         if to_recover:
             progress.step(f"recovering {len(to_recover)} rows via Stage B", 0)
-            recovered_count = 0
             for row in to_recover:
-                # V6 logic: LLM-based rephrasing and aspect mapping
-                # (Conceptual: implicit_pipeline handles the details when llm_provider is passed)
-                pass
+                implicit = row.get("implicit")
+                if isinstance(implicit, dict):
+                    implicit = dict(implicit)
+                    implicit["review_reason"] = str(implicit.get("review_reason") or "reasoned_recovery")
+                    row["implicit"] = implicit
             
     candidate_aspects_by_domain_train = _expand_domain_candidates_from_rows(
         rows=train_built,
@@ -3264,6 +3389,10 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
         cap_ratio=cfg.train_fallback_general_cap_ratio,
         seed=cfg.random_seed,
     )
+    train_stage_counts: dict[str, int] = {
+        "start": len(train_built),
+        "after_general_policy": len(train_export_rows),
+    }
     train_after_general_ids = {str(row.get("id") or "") for row in train_export_rows}
     train_general_policy_dropped_rows = [
         row for row in train_built if str(row.get("id") or "") not in train_after_general_ids
@@ -3291,6 +3420,7 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
         llm_provider=llm_provider,
         llm_model_name=cfg.llm_model_name,
     )
+    train_stage_counts["after_reinference"] = len(train_export_rows)
     train_export_rows, train_review_dropped_soft_rows, train_review_dropped_hard_rows, train_review_filter_stats = _split_train_review_filter(
         train_export_rows,
         mode=cfg.train_review_filter_mode,
@@ -3298,10 +3428,12 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
         min_confidence=cfg.train_topup_confidence_threshold,
         accepted_support_types=cfg.train_topup_allowed_support_types,
     )
+    train_stage_counts["after_review_filter"] = len(train_export_rows)
     train_export_rows, train_leakage_filter_stats_before_salvage = _strict_train_domain_leakage_filter(
         train_export_rows,
         candidate_aspects_by_domain=candidate_aspects_by_domain_train,
     )
+    train_stage_counts["after_leakage_filter_before_salvage"] = len(train_export_rows)
     salvaged_rows, train_salvage_stats = await _salvage_train_rows(
         train_review_dropped_soft_rows,
         mode=cfg.train_salvage_mode,
@@ -3329,11 +3461,13 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
         llm_model_name=cfg.llm_model_name,
     )
     train_export_rows = train_export_rows + salvaged_rows
+    train_stage_counts["after_salvage"] = len(train_export_rows)
     train_export_rows, train_leakage_filter_stats_after_salvage = _strict_train_domain_leakage_filter(
         train_export_rows,
         candidate_aspects_by_domain=candidate_aspects_by_domain_train,
     )
     train_export_rows = _strict_train_non_general(train_export_rows)
+    train_stage_counts["after_leakage_and_non_general"] = len(train_export_rows)
     progress.step("train export policies")
     train_export_rows, train_sentiment_before_balance, train_sentiment_after_balance, train_sentiment_constraints = _apply_train_sentiment_balance(
         train_export_rows,
@@ -3345,6 +3479,7 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
         neutral_max_ratio=cfg.train_neutral_max_ratio,
         seed=cfg.random_seed,
     )
+    train_stage_counts["after_sentiment_balance"] = len(train_export_rows)
     progress.step("train export policies: sentiment balance")
     train_topup_candidates = train_general_policy_dropped_rows + train_review_dropped_soft_rows + train_review_dropped_hard_rows
     with tqdm(
@@ -3369,24 +3504,29 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
             progress_bar=train_topup_progress,
         )
     progress.step("train export policies: topup recovery")
+    train_stage_counts["after_topup"] = len(train_export_rows)
     train_export_rows, train_leakage_filter_stats_after_topup = _strict_train_domain_leakage_filter(
         train_export_rows,
         candidate_aspects_by_domain=candidate_aspects_by_domain_train,
     )
     train_export_rows = _strict_train_non_general(train_export_rows)
+    train_stage_counts["after_topup_leakage_and_non_general"] = len(train_export_rows)
     train_export_rows, train_target_stats = _apply_train_size_target(
         train_export_rows,
         target_min_rows=cfg.train_target_min_rows,
         target_max_rows=cfg.train_target_max_rows,
         seed=cfg.random_seed,
     )
+    train_stage_counts["after_size_target"] = len(train_export_rows)
     progress.step("train export policies: size targeting")
     train_export_rows, train_leakage_filter_stats_after_targeting = _strict_train_domain_leakage_filter(
         train_export_rows,
         candidate_aspects_by_domain=candidate_aspects_by_domain_train,
     )
     train_export_rows = _strict_train_non_general(train_export_rows)
+    train_stage_counts["after_final_leakage_and_non_general"] = len(train_export_rows)
     strict_train_export_rows = [row for row in train_export_rows if _strict_row_passes(row)] if cfg.strict_implicit_enabled else list(train_export_rows)
+    train_stage_counts["after_strict_implicit"] = len(strict_train_export_rows)
     train_export_floor_rows: list[dict[str, Any]] = []
     if cfg.strict_implicit_enabled and not strict_train_export_rows and (artifact_mode == "debug_artifacts" or sampled_run):
         accepted_support = {str(value).strip() for value in cfg.train_topup_allowed_support_types if str(value).strip()}
@@ -3675,6 +3815,7 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
         "train_review_dropped_soft_rows": len(train_review_dropped_soft_rows),
         "train_review_dropped_hard_rows": len(train_review_dropped_hard_rows),
         "train_reinference_stats": train_reinference_stats,
+        "train_export_stage_counts": train_stage_counts,
         "train_salvage_stats": train_salvage_stats,
         "train_leakage_filter_stats_before_salvage": train_leakage_filter_stats_before_salvage,
         "train_leakage_filter_stats_after_salvage": train_leakage_filter_stats_after_salvage,
@@ -3746,6 +3887,12 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
             "benchmark_duplicate_rate_ok": float(benchmark_metadata.get("duplicate_interpretation_rate", 1.0)) <= 0.01,
             "benchmark_thermal_share_ok": float(benchmark_metadata.get("thermal_share", 1.0)) <= 0.35,
             "benchmark_domain_coverage_ok": bool(benchmark_metadata.get("benchmark_domain_coverage_ok", True)),
+            "benchmark_family_floor_ok": bool(benchmark_metadata.get("family_floor_policy", {}).get("applied", False))
+            or all(
+                int(benchmark_metadata.get("source_domain_family_counts", {}).get(domain, 0)) == 0
+                or int(benchmark_metadata.get("benchmark_domain_family_counts", {}).get(domain, 0)) > 0
+                for domain in _CORE_BENCHMARK_DOMAINS
+            ),
             "benchmark_implicit_purity_ok": float(benchmark_metadata.get("implicit_purity_rate", 0.0)) >= 0.7,
             "benchmark_ontology_compatibility_ok": float(benchmark_metadata.get("ontology_compatibility_rate", 0.0)) >= 0.9,
             "sentiment_mismatch_rate_ok": float(sentiment_quality.get("sentiment_mismatch_rate", 1.0)) <= 0.2,
@@ -3797,6 +3944,8 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
         blocking_reasons.append({"code": "BENCHMARK_THERMAL_OVERCONCENTRATION", "message": "Thermal aspect share remains over concentrated."})
     if not bool(report["validation"].get("benchmark_domain_coverage_ok")):
         blocking_reasons.append({"code": "BENCHMARK_DOMAIN_COVERAGE", "message": "Benchmark is missing a core V1 domain family present in the source pool."})
+    if not bool(report["validation"].get("benchmark_family_floor_ok")):
+        blocking_reasons.append({"code": "BENCHMARK_FAMILY_FLOOR", "message": "Debug benchmark family floor could not restore a missing core family."})
     if not bool(report["validation"].get("benchmark_implicit_purity_ok")):
         blocking_reasons.append({"code": "BENCHMARK_IMPLICIT_PURITY", "message": "Benchmark implicit purity rate is below threshold."})
     if not bool(report["validation"].get("benchmark_ontology_compatibility_ok")):
