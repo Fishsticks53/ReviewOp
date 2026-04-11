@@ -30,6 +30,7 @@ const PRESETS = [
 
 export default function ExportsPage({ isDark, onExportJson, onExportPdf, exportPayload, exportFilters, setExportFilters, loading = false, onRefreshExport }) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [exporting, setExporting] = useState(null);
   const previewRows = useMemo(() => {
     const rows = exportPayload?.user_reviews?.rows || [];
     return rows.slice(0, 8).map((row) => ({
@@ -37,6 +38,19 @@ export default function ExportsPage({ isDark, onExportJson, onExportPdf, exportP
       ...row,
     }));
   }, [exportPayload]);
+
+  async function handleExport(kind) {
+    setExporting(kind);
+    try {
+      if (kind === "json") {
+        await onExportJson(exportFilters);
+      } else {
+        await onExportPdf(exportFilters);
+      }
+    } finally {
+      setExporting(null);
+    }
+  }
 
   return (
     <section className="space-y-4">
@@ -75,11 +89,11 @@ export default function ExportsPage({ isDark, onExportJson, onExportPdf, exportP
             />
           </label>
           <div className="flex items-end gap-3">
-            <button type="button" onClick={() => onExportJson(exportFilters)} className="rounded-xl border border-border-subtle bg-app/30 px-4 py-2 text-sm font-semibold text-brand-primary hover:bg-brand-primary/10">
-              Export JSON
+            <button type="button" onClick={() => handleExport("json")} disabled={exporting !== null} className="rounded-xl border border-border-subtle bg-app/30 px-4 py-2 text-sm font-semibold text-brand-primary hover:bg-brand-primary/10 disabled:opacity-50">
+              {exporting === "json" ? "Exporting..." : "Export JSON"}
             </button>
-            <button type="button" onClick={() => onExportPdf(exportFilters)} className="rounded-xl border border-border-subtle bg-app/30 px-4 py-2 text-sm font-semibold text-brand-primary hover:bg-brand-primary/10">
-              Export PDF
+            <button type="button" onClick={() => handleExport("pdf")} disabled={exporting !== null} className="rounded-xl border border-border-subtle bg-app/30 px-4 py-2 text-sm font-semibold text-brand-primary hover:bg-brand-primary/10 disabled:opacity-50">
+              {exporting === "pdf" ? "Exporting..." : "Export PDF"}
             </button>
           </div>
         </div>

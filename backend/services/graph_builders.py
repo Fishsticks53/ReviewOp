@@ -7,7 +7,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session, selectinload
 
-from models.tables import NovelCandidate, Prediction, Review
+from models.tables import NovelCandidate, Prediction, ProductCatalog, Review, UserProductReview
 
 
 SENTIMENT_SCORE = {"positive": 1.0, "neutral": 0.0, "negative": -1.0}
@@ -37,6 +37,11 @@ def _normalize_text(value: str) -> str:
     return " ".join((value or "").lower().replace("_", " ").replace("-", " ").split())
 
 
+def _clean_filter_value(value: str | None) -> str | None:
+    cleaned = (value or "").strip()
+    return cleaned or None
+
+
 def _infer_origin(aspect: str, snippet: str | None) -> str:
     # Fallback heuristic until origin is stored explicitly in the DB.
     aspect_terms = set(_normalize_text(aspect).split())
@@ -64,6 +69,49 @@ def _polarity_hint(source_sentiment: str | None, target_sentiment: str | None) -
     if "positive" in {src, dst}:
         return "positive"
     return "neutral"
+
+
+def build_graph_filter_options(db: Session) -> dict:
+    domain_rows = (
+        db.query(Review.domain)
+        .filter(Review.domain.isnot(None))
+        .distinct()
+        .order_by(Review.domain.asc())
+        .all()
+    )
+    review_product_rows = (
+        db.query(Review.product_id)
+        .filter(Review.product_id.isnot(None))
+        .filter(Review.product_id != "")
+        .distinct()
+        .order_by(Review.product_id.asc())
+        .all()
+    )
+    user_review_product_rows = (
+        db.query(UserProductReview.product_id)
+        .filter(UserProductReview.product_id.isnot(None))
+        .filter(UserProductReview.product_id != "")
+        .distinct()
+        .order_by(UserProductReview.product_id.asc())
+        .all()
+    )
+    catalog_product_rows = (
+        db.query(ProductCatalog.product_id)
+        .filter(ProductCatalog.product_id.isnot(None))
+        .filter(ProductCatalog.product_id != "")
+        .distinct()
+        .order_by(ProductCatalog.product_id.asc())
+        .all()
+    )
+
+    domains = [str(row[0]).strip() for row in domain_rows if row and row[0] and str(row[0]).strip()]
+    product_ids: list[str] = []
+    for rows in (review_product_rows, user_review_product_rows, catalog_product_rows):
+        for row in rows:
+            if row and row[0] and str(row[0]).strip():
+                product_ids.append(str(row[0]).strip())
+    product_ids = list(dict.fromkeys(product_ids))
+    return {"domains": domains, "product_ids": product_ids}
 
 
 def build_single_review_graph(db: Session, review_id: int) -> dict | None:
@@ -195,6 +243,8 @@ def build_batch_aspect_graph(
     min_edge_weight: int = 1,
     graph_mode: str = "accepted",
 ) -> dict:
+    domain = _clean_filter_value(domain)
+    product_id = _clean_filter_value(product_id)
     f = _parse_dt(dt_from)
     t = _parse_dt(dt_to)
     mode = (graph_mode or "accepted").strip().lower()
@@ -334,6 +384,8 @@ def _build_batch_novel_graph(
     f: datetime | None,
     t: datetime | None,
 ) -> dict:
+    domain = _clean_filter_value(domain)
+    product_id = _clean_filter_value(product_id)
     query = db.query(NovelCandidate, Review).join(Review, NovelCandidate.review_id == Review.id)
     if domain:
         query = query.filter(Review.domain == domain)

@@ -98,12 +98,18 @@ export default function AlertsPage({ alerts = [], isDark, onAlertClick, onAlertC
           </div>
         </div>
 
-        <DataGridTable 
-          isDark={isDark}
-          rows={rows}
-          columns={columns}
-          height={600}
-        />
+        {rows.length ? (
+          <DataGridTable 
+            isDark={isDark}
+            rows={rows}
+            columns={columns}
+            height={600}
+          />
+        ) : (
+          <div className={`grid h-[600px] place-items-center rounded-xl border ${isDark ? "border-slate-800 bg-slate-950 text-slate-400" : "border-slate-200 bg-slate-50 text-slate-500"}`}>
+            No alerts match the current filters.
+          </div>
+        )}
       </div>
     </section>
   );

@@ -587,7 +587,30 @@ def sync_alerts(db: Session, domain: Optional[str] = None) -> list[Alert]:
 
 
 def alerts(db: Session, domain: Optional[str] = None) -> list[dict]:
-    rows = sync_alerts(db, domain=domain)
+    if domain is None:
+        active_domains = [
+            row[0]
+            for row in db.query(Review.domain)
+            .filter(Review.domain.isnot(None))
+            .distinct()
+            .all()
+        ]
+        if active_domains:
+            for active_domain in active_domains:
+                sync_alerts(db, domain=active_domain)
+        has_global_reviews = (
+            db.query(Review.id)
+            .filter(Review.domain.is_(None))
+            .filter(Review.predictions.any())
+            .first()
+            is not None
+        )
+        if has_global_reviews or not active_domains:
+            rows = sync_alerts(db, domain=None)
+        else:
+            rows = db.query(Alert).order_by(Alert.created_at.desc(), Alert.id.desc()).all()
+    else:
+        rows = sync_alerts(db, domain=domain)
     return [
         {
             "id": row.id,
@@ -597,6 +620,10 @@ def alerts(db: Session, domain: Optional[str] = None) -> list[dict]:
             "message": row.message,
             "value": float(row.value),
             "threshold": float(row.threshold),
+            "status": "open",
+            "detected_at": row.created_at.isoformat() if row.created_at else None,
+            "priority_score": float(row.value),
+            "domain": row.domain,
         }
         for row in rows
     ]

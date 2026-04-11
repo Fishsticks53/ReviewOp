@@ -93,6 +93,10 @@ export async function getReviewGraph(reviewId) {
   return request(`/graph/review/${reviewId}`);
 }
 
+export async function getGraphFilterOptions() {
+  return request("/graph/filter-options");
+}
+
 export async function getBatchAspectGraph(filters = {}) {
   const params = new URLSearchParams();
 

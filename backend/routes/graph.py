@@ -2,11 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from core.db import get_db
-from models.schemas import GraphResponseOut
-from services.graph_builders import build_batch_aspect_graph, build_single_review_graph
+from models.schemas import GraphFilterOptionsOut, GraphResponseOut
+from services.graph_builders import build_batch_aspect_graph, build_graph_filter_options, build_single_review_graph
 
 
 router = APIRouter(prefix="/graph", tags=["graph"])
+
+
+@router.get("/filter-options", response_model=GraphFilterOptionsOut)
+def graph_filter_options(db: Session = Depends(get_db)):
+    return build_graph_filter_options(db)
 
 
 @router.get("/review/{review_id}", response_model=GraphResponseOut)

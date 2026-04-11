@@ -5,6 +5,7 @@ import {
   inferBatchCsv,
   getJob,
   getReviewGraph,
+  getGraphFilterOptions,
   getBatchAspectGraph,
   getDashboardKpis,
   getAspectLeaderboard,
@@ -31,6 +32,7 @@ import AlertsPage from "./AlertsPage";
 import AlertDetailPage from "./AlertDetailPage";
 import UserReviewsInsights from "./UserReviewsInsights";
 import ExportsPage from "./ExportsPage";
+import { resetGraphFilters } from "./graphFilterUtils";
 import { useAuth } from "../../auth/AuthContext";
 
 const initialGraphFilters = {
@@ -38,7 +40,7 @@ const initialGraphFilters = {
   product_id: "",
   from: "",
   to: "",
-  min_edge_weight: 2,
+  min_edge_weight: 1,
 };
 
 export default function AdminPortal() {
@@ -55,6 +57,7 @@ export default function AdminPortal() {
   const [reviewGraph, setReviewGraph] = useState(null);
   const [batchGraph, setBatchGraph] = useState(null);
   const [graphFilters, setGraphFilters] = useState(initialGraphFilters);
+  const [graphFilterOptions, setGraphFilterOptions] = useState({ domains: [], product_ids: [] });
   const [batchFile, setBatchFile] = useState(null);
 
   const [kpis, setKpis] = useState(null);
@@ -86,9 +89,13 @@ export default function AdminPortal() {
   useEffect(() => {
     const load = async () => {
       try {
-        await refreshAnalytics();
-        await refreshBatchGraph(initialGraphFilters);
-        await refreshExportPreview({ domain: "", limit: 100, offset: 0 });
+        const [options] = await Promise.all([
+          getGraphFilterOptions().catch(() => ({ domains: [], product_ids: [] })),
+          refreshAnalytics(),
+          refreshBatchGraph(initialGraphFilters),
+          refreshExportPreview({ domain: "", limit: 100, offset: 0 }),
+        ]);
+        setGraphFilterOptions(options || { domains: [], product_ids: [] });
       } catch {
         // allow empty startup
       }
@@ -202,6 +209,17 @@ export default function AdminPortal() {
     }
   }
 
+  async function resetBatchGraphFilters() {
+    setError("");
+    const resetFilters = resetGraphFilters(initialGraphFilters);
+    setGraphFilters(resetFilters);
+    try {
+      await refreshBatchGraph(resetFilters);
+    } catch (ex) {
+      setError(ex.message || "Batch graph reset failed");
+    }
+  }
+
   const leaderboardRows = useMemo(() => leaderboard.map((row, idx) => ({ id: `${row.aspect}-${idx}`, ...row })), [leaderboard]);
   const pageNav = ["Dashboard", "AspectAnalytics", "GraphExplorer", "ReviewExplorer", "Alerts", "UserReviews", "Exports"];
 
@@ -255,20 +273,6 @@ export default function AdminPortal() {
 
           </div>
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleExportJson}
-              className={`rounded-xl px-3 py-2 text-sm font-semibold ${isDark ? "bg-cyan-700 text-cyan-100" : "bg-cyan-100 text-cyan-800"}`}
-            >
-              Export JSON
-            </button>
-            <button
-              type="button"
-              onClick={handleExportPdf}
-              className={`rounded-xl px-3 py-2 text-sm font-semibold ${isDark ? "bg-violet-700 text-violet-100" : "bg-violet-100 text-violet-800"}`}
-            >
-              Export PDF
-            </button>
             <label className="inline-flex items-center gap-3 text-sm">
               <span className={isDark ? "text-slate-300" : "text-slate-600"}>Day</span>
               <span className="relative inline-flex items-center">
@@ -310,7 +314,9 @@ export default function AdminPortal() {
               graphFilters={graphFilters}
               setGraphFilters={setGraphFilters}
               onApplyFilters={applyBatchGraphFilters}
+              onResetFilters={resetBatchGraphFilters}
               graphLoading={graphLoading}
+              filterOptions={graphFilterOptions}
               isDark={isDark}
             />
           ) : null}

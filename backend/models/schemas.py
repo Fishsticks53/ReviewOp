@@ -187,6 +187,10 @@ class AlertOut(BaseModel):
     message: str
     value: float
     threshold: float
+    status: Optional[str] = "open"
+    detected_at: Optional[str] = None
+    priority_score: Optional[float] = None
+    domain: Optional[str] = None
 
 
 class UserReviewSummaryOut(BaseModel):
@@ -330,6 +334,11 @@ class GraphResponseOut(BaseModel):
     filters: dict = Field(default_factory=dict)
     nodes: List[GraphNodeOut] = Field(default_factory=list)
     edges: List[GraphEdgeOut] = Field(default_factory=list)
+
+
+class GraphFilterOptionsOut(BaseModel):
+    domains: List[str] = Field(default_factory=list)
+    product_ids: List[str] = Field(default_factory=list)
 
 
 class AuthRegisterIn(BaseModel):
