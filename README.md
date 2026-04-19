@@ -1,88 +1,142 @@
-# ReviewOp (V6)
+# ReviewOp
 
-ReviewOp is a monorepo for aspect-based sentiment analysis.
+ReviewOp is a research and demo system for aspect-based sentiment analysis on product reviews. The project combines a dataset-building pipeline, a ProtoNet implicit-aspect classifier, a FastAPI backend, and a React frontend for admin and user-facing review workflows.
 
-- `dataset_builder/`: builds benchmark datasets
-- `protonet/`: trains/evaluates/exports ProtoNet
-- `backend/`: FastAPI APIs
-- `frontend/`: React + Vite UI
-
-## Repo Layout
+## System Flow
 
 ```text
-ReviewOp/
-|-- backend/
-|-- frontend/
-|-- dataset_builder/
-|-- protonet/
-|-- run-project.ps1
-|-- run-services.ps1
-`-- SEARCH_OVERVIEW.md
+raw / scraped reviews
+    -> dataset_builder
+    -> benchmark JSONL artifacts
+    -> protonet training and model export
+    -> backend hybrid inference, analytics, and knowledge graph APIs
+    -> frontend admin and user portals
 ```
 
-## Quick Start (Root)
+The main runtime model path is:
 
-Run from repository root in PowerShell.
+1. `dataset_builder` creates canonical train/validation/test JSONL files.
+2. `protonet` trains and exports `protonet/metadata/model_bundle.pt`.
+3. `backend` loads the exported bundle when implicit-aspect inference is enabled.
+4. `frontend` calls the backend APIs for authentication, review submission, analytics, graph exploration, jobs, and exports.
+
+## Repository Layout
+
+| Path | Purpose |
+| --- | --- |
+| `backend/` | FastAPI app, route modules, database access, auth dependencies, analytics services, batch jobs, inference orchestration, and export APIs. |
+| `frontend/` | Vite React app for admin dashboards, product/review pages, authentication, user review submission, and analytics visualizations. |
+| `dataset_builder/` | Async pipeline for turning raw reviews into benchmark-ready aspect/sentiment examples, including optional LLM-backed ambiguity resolution. |
+| `protonet/` | ProtoNet training, evaluation, export, and runtime serving code for implicit aspect classification. |
+| `metadata/` | Shared metadata artifacts used by the app and model pipelines. |
+| `plans/`, `plan.md`, `tasks.md` | Local implementation planning and task tracking artifacts. |
+| `run-project.ps1` | Windows setup script for backend and frontend dependencies. |
+| `run-services.ps1` | Windows helper script that starts backend and frontend dev servers. |
+
+Additional architecture notes may exist outside the repository under `../agent_docs/ReviewOp/`.
+
+## Quick Start
+
+Prerequisites:
+
+- Python 3.10 through 3.13.
+- Node.js and npm.
+- MySQL-compatible database configured for the backend.
+- PowerShell on Windows for the included helper scripts.
+
+Install dependencies:
 
 ```powershell
-# 1) Prepare backend/frontend dependencies
 .\run-project.ps1
+```
 
-# 2) Build dataset
-python dataset_builder\code\build_dataset.py --input-dir dataset_builder\input --output-dir dataset_builder\output
+Start the backend and frontend:
 
-# 3) Train model
-python protonet\code\cli.py train --input-type benchmark --input-dir dataset_builder\output\benchmark\ambiguity_grounded
-
-# 4) Evaluate best checkpoint
-python protonet\code\cli.py eval --input-type benchmark --input-dir dataset_builder\output\benchmark\ambiguity_grounded --split test --checkpoint protonet\output\checkpoints\best.pt
-
-# 5) Export runtime bundle
-python protonet\code\cli.py export --input-type benchmark --input-dir dataset_builder\output\benchmark\ambiguity_grounded --checkpoint protonet\output\checkpoints\best.pt
-
-# 6) Start backend + frontend (new terminals)
+```powershell
 .\run-services.ps1
 ```
 
-## RunPod Topology
-
-- `dataset_builder` uses its own RunPod LLM endpoint via `REVIEWOP_RUNPOD_API_KEY` and `REVIEWOP_RUNPOD_ENDPOINT_URL`
-- `protonet` and `backend` share one RunPod Flash endpoint via `PROTONET_FLASH_ENDPOINT_ID`
-- local fallback remains available through the exported Protonet bundle at `REVIEWOP_PROTONET_BUNDLE_PATH`
-- backend bootstrap installs the spaCy `en_core_web_sm` model because open-aspect extraction depends on it
-
-## Root Commands And Options
-
-### `run-project.ps1`
-
-Purpose: setup helper (checks Python/Node, creates backend venv, installs backend/frontend deps).
-
-Options: none.
-
-### `run-services.ps1`
-
-Purpose: starts backend (`uvicorn`) and frontend (`npm run dev`) in new PowerShell windows.
-
-Options: none.
-
-### `dataset_builder` CLI
-
-Command:
+Manual service startup:
 
 ```powershell
-python dataset_builder\code\build_dataset.py [options]
+.\backend\venv\Scripts\python.exe -m uvicorn app:app --app-dir backend --host 127.0.0.1 --port 8000
 ```
-
-Full options: `dataset_builder/README.md`
-
-### `protonet` CLI
-
-Commands:
 
 ```powershell
-python protonet\code\cli.py train [options]
-python protonet\code\cli.py eval [common options] [eval options]
-python protonet\code\cli.py export [common options] [export options]
+npm --prefix frontend run dev
 ```
 
-Full options: `protonet/README.md`
+Default local URLs:
+
+- Backend API docs: `http://127.0.0.1:8000/docs`
+- Frontend dev server: printed by Vite, usually `http://127.0.0.1:5173`
+
+## Core Workflows
+
+Run the commands in this section from the repository root.
+
+### Build Dataset Artifacts
+
+```powershell
+python dataset_builder\code\build_dataset.py --input-dir dataset_builder\input --output-dir dataset_builder\output --run-profile research --sample-size 50 --no-enable-llm-fallback
+```
+
+Expected benchmark outputs:
+
+- `dataset_builder/output/benchmark/ambiguity_grounded/train.jsonl`
+- `dataset_builder/output/benchmark/ambiguity_grounded/val.jsonl`
+- `dataset_builder/output/benchmark/ambiguity_grounded/test.jsonl`
+- `dataset_builder/output/benchmark/ambiguity_grounded/metadata.json`
+
+For LLM-backed experiments, prefer the experiment runner documented in `dataset_builder/README.md` so caches, reports, and quality gates remain reproducible.
+
+### Train and Export ProtoNet
+
+```powershell
+python protonet\code\cli.py train --input-type benchmark --input-dir dataset_builder\output\benchmark\ambiguity_grounded --output-dir protonet\output
+python protonet\code\cli.py eval --input-type benchmark --input-dir dataset_builder\output\benchmark\ambiguity_grounded --checkpoint protonet\output\checkpoints\best.pt --split test
+python protonet\code\cli.py export --input-type benchmark --input-dir dataset_builder\output\benchmark\ambiguity_grounded --checkpoint protonet\output\checkpoints\best.pt
+```
+
+The backend expects the exported bundle at `protonet/metadata/model_bundle.pt` unless configured otherwise.
+
+### Run Frontend Build
+
+```powershell
+npm --prefix frontend run build
+```
+
+### Run Backend Import Check
+
+```powershell
+.\backend\venv\Scripts\python.exe -c "import sys; sys.path.insert(0, 'backend'); import app; print('backend import ok')"
+```
+
+## Runtime Configuration
+
+The backend uses environment variables and configuration in `backend/core/config.py`. Do not hardcode credentials in code or documentation.
+
+Important runtime switches:
+
+| Variable | Purpose |
+| --- | --- |
+| `REVIEWOP_ENABLE_IMPLICIT` | Enables or disables ProtoNet implicit-aspect inference in the backend. |
+| `REVIEWOP_TRUSTED_BUNDLE_ROOTS` | Adds trusted directories for loading ProtoNet bundles. |
+
+Admin APIs are protected by backend authentication dependencies. User portal routes use user-token authentication. Local demo/default accounts should only be enabled in dev/demo/local environments.
+
+## Security Notes
+
+- Never commit `.env`, database credentials, tokens, or model-provider API keys.
+- Backend export endpoints require admin authentication.
+- ProtoNet bundle loading is restricted to trusted roots because exported PyTorch bundles require object deserialization.
+- Batch CSV processing runs asynchronously to avoid blocking API requests.
+
+## Folder Documentation
+
+- `backend/README.md`
+- `frontend/README.md`
+- `dataset_builder/README.md`
+- `protonet/README.md`
+
+Read the folder-level README before changing that subsystem.

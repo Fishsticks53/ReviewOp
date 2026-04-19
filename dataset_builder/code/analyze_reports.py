@@ -5,7 +5,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from utils import read_jsonl, utc_now_iso, write_json
+try:
+    from .utils import read_jsonl, utc_now_iso, write_json
+except ImportError:  # pragma: no cover
+    from utils import read_jsonl, utc_now_iso, write_json
 
 
 def _load_json(path: Path) -> dict[str, Any]:

@@ -3,7 +3,10 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any, Iterable
 
-from utils import stable_id, to_jsonable, utc_now_iso
+try:
+    from .utils import stable_id, to_jsonable, utc_now_iso
+except ImportError:  # pragma: no cover
+    from utils import stable_id, to_jsonable, utc_now_iso
 
 
 @dataclass(frozen=True)

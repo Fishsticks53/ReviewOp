@@ -4,18 +4,19 @@ from sqlalchemy.orm import Session
 from core.db import get_db
 from models.schemas import GraphFilterOptionsOut, GraphResponseOut
 from services.graph_builders import build_batch_aspect_graph, build_graph_filter_options, build_single_review_graph
+from routes.user_portal import require_admin
 
 
 router = APIRouter(prefix="/graph", tags=["graph"])
 
 
 @router.get("/filter-options", response_model=GraphFilterOptionsOut)
-def graph_filter_options(db: Session = Depends(get_db)):
+def graph_filter_options(_: None = Depends(require_admin), db: Session = Depends(get_db)):
     return build_graph_filter_options(db)
 
 
 @router.get("/review/{review_id}", response_model=GraphResponseOut)
-def review_graph(review_id: int, db: Session = Depends(get_db)):
+def review_graph(review_id: int, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     payload = build_single_review_graph(db, review_id)
     if payload is None:
         raise HTTPException(status_code=404, detail="Review not found")
@@ -30,6 +31,7 @@ def batch_graph(
     dt_to: str | None = Query(default=None, alias="to"),
     min_edge_weight: int = 1,
     graph_mode: str = Query(default="accepted", pattern="^(accepted|novel_side)$"),
+    _: None = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     return build_batch_aspect_graph(

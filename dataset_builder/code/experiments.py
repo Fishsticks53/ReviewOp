@@ -4,9 +4,14 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from contracts import BuilderConfig
-from research_stack import benchmark_registry_payload, build_experiment_plan, model_registry_payload
-from utils import stable_id, write_json, utc_now_iso
+try:
+    from .contracts import BuilderConfig
+    from .research_stack import benchmark_registry_payload, build_experiment_plan, model_registry_payload
+    from .utils import stable_id, write_json, utc_now_iso
+except ImportError:  # pragma: no cover
+    from contracts import BuilderConfig
+    from research_stack import benchmark_registry_payload, build_experiment_plan, model_registry_payload
+    from utils import stable_id, write_json, utc_now_iso
 
 
 def run_experiments(base_cfg: BuilderConfig, overrides: list[dict[str, Any]], output_dir: Path) -> list[dict[str, Any]]:

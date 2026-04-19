@@ -4,6 +4,7 @@ from dataclasses import fields
 from functools import lru_cache
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 from typing import Any, Dict, List
@@ -29,8 +30,37 @@ WHITESPACE_RE = re.compile(r"\s+")
 PATH_FIELDS = {
     field.name
     for field in fields(ProtonetConfig)
-    if field.name.endswith("_dir") or field.name == "input_dir" or field.name == "output_dir" or field.name == "metadata_dir"
+    if (
+        field.name.endswith("_dir")
+        or field.name.endswith("_path")
+        or field.name == "input_dir"
+        or field.name == "output_dir"
+        or field.name == "metadata_dir"
+    )
 }
+
+
+def _trusted_bundle_roots() -> list[Path]:
+    roots = [Path.cwd(), Path(__file__).resolve().parents[1]]
+    configured = os.environ.get("REVIEWOP_TRUSTED_BUNDLE_ROOTS", "")
+    for item in configured.split(os.pathsep):
+        if item.strip():
+            roots.append(Path(item.strip()))
+    return [root.resolve() for root in roots]
+
+
+def _assert_trusted_bundle_path(bundle_path: str | Path) -> Path:
+    resolved = Path(bundle_path).expanduser().resolve()
+    if not resolved.exists():
+        raise FileNotFoundError(f"ProtoNet bundle not found: {resolved}")
+    trusted_roots = _trusted_bundle_roots()
+    if any(resolved == root or root in resolved.parents for root in trusted_roots):
+        return resolved
+    roots_text = ", ".join(str(root) for root in trusted_roots)
+    raise ValueError(
+        "Refusing to load ProtoNet bundle outside trusted roots because torch.load deserializes Python objects. "
+        f"Move the bundle under a trusted root or set REVIEWOP_TRUSTED_BUNDLE_ROOTS. Trusted roots: {roots_text}"
+    )
 
 
 def _normalize_ws(text: str) -> str:
@@ -121,7 +151,8 @@ class ProtonetRuntime:
 
     @classmethod
     def load(cls, bundle_path: str | Path) -> "ProtonetRuntime":
-        payload = torch.load(Path(bundle_path), map_location="cpu", weights_only=False)  # bundle stores non-tensor config objects
+        trusted_path = _assert_trusted_bundle_path(bundle_path)
+        payload = torch.load(trusted_path, map_location="cpu", weights_only=False)  # bundle stores non-tensor config objects
         cfg = _build_config(payload["config"])
         encoder_info = dict(payload.get("encoder") or {})
         encoder_backend = str(encoder_info.get("backend") or cfg.encoder_backend or "auto").strip().lower()
@@ -144,8 +175,11 @@ class ProtonetRuntime:
                 encoder.model.load_state_dict(encoder_state["state_dict"])
             if "pooling_head" in encoder_state and encoder.pooling_head is not None:
                 encoder.pooling_head.load_state_dict(encoder_state["pooling_head"])
-        encoder.eval()
-        projection.eval()
+        # The bundle is loaded on CPU for safety, but inference should run on cfg.device.
+        # Without this, CUDA-capable environments will crash because inputs are moved to
+        # cfg.device while the encoder/projection remain on CPU.
+        encoder.to(cfg.device).eval()
+        projection.to(cfg.device).eval()
         prototype_bank = payload["prototype_bank"]
         runtime = cls(
             cfg=cfg,

@@ -5,7 +5,10 @@ import unicodedata
 from collections import Counter
 from typing import Iterable
 
-from utils import normalize_whitespace, tokenize
+try:
+    from .utils import normalize_whitespace, tokenize
+except ImportError:  # pragma: no cover
+    from utils import normalize_whitespace, tokenize
 
 
 DEVANAGARI_RE = re.compile(r"[\u0900-\u097F]")

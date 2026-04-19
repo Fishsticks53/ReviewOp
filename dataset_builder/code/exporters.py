@@ -5,7 +5,10 @@ from typing import Any
 
 import json
 
-from utils import read_jsonl, write_json, write_jsonl
+try:
+    from .utils import read_jsonl, write_json, write_jsonl
+except ImportError:  # pragma: no cover
+    from utils import read_jsonl, write_json, write_jsonl
 
 
 def _benchmark_artifact_counts(base_dir: Path) -> dict[str, int]:
@@ -109,7 +112,10 @@ def write_pipeline_outputs(
             for item in quality_analysis_artifact.get("review_queue_rows", [])
         ],
     )
-    from synthetic_generation import write_synthetic_outputs
+    try:
+        from .synthetic_generation import write_synthetic_outputs
+    except ImportError:  # pragma: no cover
+        from synthetic_generation import write_synthetic_outputs
 
     write_synthetic_outputs(
         output_dir=cfg.output_dir / "synthetic",

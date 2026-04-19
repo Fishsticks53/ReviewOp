@@ -1172,5 +1172,8 @@
   "0cc457c2541d2a09bedc73edf78e5c48": "[\n  {\"label\": \"loading time\", \"confidence\": 0.9, \"evidence\": \"I was staring at the loading icon for what felt like an eternity.\"}\n]",
   "676051926398cb4284f71f09c15c1179": "[{\"label\": \"loading time\", \"confidence\": 0.9, \"evidence\": \"I was staring at the loading icon for what felt like an eternity.\"}]",
   "a1390a2222bced408f16246ab773963c": "[\n  {\"label\": \"loading time\", \"confidence\": 0.9, \"evidence\": \"I was staring at the loading icon for what felt like an eternity.\"}\n]",
-  "93aa266bdb95404542e8996d38df5e2c": "[{\"label\": \"loading time\", \"confidence\": 0.9, \"evidence\": \"I was staring at the loading icon for what felt like an eternity.\"}]"
+  "93aa266bdb95404542e8996d38df5e2c": "[{\"label\": \"loading time\", \"confidence\": 0.9, \"evidence\": \"I was staring at the loading icon for what felt like an eternity.\"}]",
+  "ded0ef6559f6316d3b88a1590ce799ae": "display quality",
+  "0278e80d3ff39d9aa82413e42e64ee02": "none",
+  "7f4dea1275e9ae4628e9fbbe95d7d885": "none"
 }

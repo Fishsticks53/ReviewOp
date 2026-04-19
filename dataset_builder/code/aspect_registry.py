@@ -4,7 +4,10 @@ from collections import Counter, defaultdict
 from copy import deepcopy
 from typing import Any
 
-from utils import normalize_whitespace
+try:
+    from .utils import normalize_whitespace
+except ImportError:  # pragma: no cover
+    from utils import normalize_whitespace
 
 ASPECT_REGISTRY_VERSION = "v1"
 

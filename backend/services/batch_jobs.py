@@ -2,16 +2,29 @@
 from __future__ import annotations
 
 from datetime import datetime
+import logging
+import threading
 from typing import Optional, List
 
 import pandas as pd
 from sqlalchemy.orm import Session
 
+from core.db import SessionLocal
 from models.tables import Job, JobItem, Review, Prediction, EvidenceSpan
 from services.evidence import find_evidence_for_aspect
 from services.seq2seq_infer import Seq2SeqEngine
 from services.open_aspect import extract_open_aspects
 from services.review_pipeline import refresh_corpus_graph
+
+logger = logging.getLogger(__name__)
+
+
+def _error_code(exc: Exception) -> str:
+    if isinstance(exc, ValueError):
+        return "invalid_input"
+    if isinstance(exc, UnicodeError):
+        return "decode_error"
+    return type(exc).__name__
 
 
 def _safe_extract_aspects(text: str, max_aspects: int = 8) -> list[str]:
@@ -106,7 +119,7 @@ def process_csv_sync(
             item = db.query(JobItem).filter(JobItem.job_id == job.id, JobItem.row_index == i).first()
             job = db.query(Job).filter(Job.id == job.id).first() or job
             item.status = "failed"
-            item.error = str(ex)[:2000]
+            item.error = _error_code(ex)
             job.failed += 1
             job.updated_at = datetime.utcnow()
             db.add(item)
@@ -118,6 +131,41 @@ def process_csv_sync(
     try:
         refresh_corpus_graph(db, domain=domain)
     except Exception as ex:
-        job.error = f"{job.error + ' | ' if job.error else ''}corpus graph refresh failed: {str(ex)[:400]}"
+        job.error = f"{job.error + ' | ' if job.error else ''}corpus_graph_refresh_failed"
     db.add(job)
     db.commit()
+
+
+def schedule_csv_processing(
+    *,
+    engine: Seq2SeqEngine,
+    job_id: str,
+    df: pd.DataFrame,
+    domain: Optional[str] = None,
+    product_id: Optional[str] = None,
+) -> threading.Thread:
+    def _worker() -> None:
+        db = SessionLocal()
+        try:
+            job = db.query(Job).filter(Job.id == job_id).first()
+            if not job:
+                return
+            process_csv_sync(db=db, engine=engine, job=job, df=df, domain=domain, product_id=product_id)
+        except Exception as exc:
+            logger.exception("CSV job worker crashed (job_id=%s)", job_id)
+            try:
+                job = db.query(Job).filter(Job.id == job_id).first()
+                if job:
+                    job.status = "failed"
+                    job.error = _error_code(exc)
+                    job.updated_at = datetime.utcnow()
+                    db.add(job)
+                    db.commit()
+            except Exception:
+                db.rollback()
+        finally:
+            db.close()
+
+    thread = threading.Thread(target=_worker, name=f"csv-job-{job_id}", daemon=True)
+    thread.start()
+    return thread

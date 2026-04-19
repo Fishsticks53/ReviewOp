@@ -8,47 +8,17 @@ from typing import Optional
 from sqlalchemy.orm import Session, selectinload
 
 from models.tables import NovelCandidate, Prediction, ProductCatalog, Review, UserProductReview
+from services.analytics_common import aspect_label, canonical_aspect, infer_origin, parse_dt
 
 
 SENTIMENT_SCORE = {"positive": 1.0, "neutral": 0.0, "negative": -1.0}
-
-
-def _parse_dt(value: Optional[str]) -> Optional[datetime]:
-    if not value:
-        return None
-    try:
-        return datetime.fromisoformat(value)
-    except ValueError:
-        try:
-            return datetime.strptime(value, "%Y-%m-%d")
-        except ValueError:
-            return None
-
-
-def _canonical_aspect(prediction: Prediction) -> str:
-    return (prediction.aspect_cluster or prediction.aspect_raw or "unknown").strip() or "unknown"
-
-
-def _aspect_label(aspect: str) -> str:
-    return " ".join(part.capitalize() for part in aspect.replace("-", " ").replace("_", " ").split()) or aspect
-
-
-def _normalize_text(value: str) -> str:
-    return " ".join((value or "").lower().replace("_", " ").replace("-", " ").split())
+MAX_BATCH_GRAPH_REVIEWS = 2000
+MAX_BATCH_GRAPH_NOVEL_ROWS = 5000
 
 
 def _clean_filter_value(value: str | None) -> str | None:
     cleaned = (value or "").strip()
     return cleaned or None
-
-
-def _infer_origin(aspect: str, snippet: str | None) -> str:
-    # Fallback heuristic until origin is stored explicitly in the DB.
-    aspect_terms = set(_normalize_text(aspect).split())
-    snippet_terms = set(_normalize_text(snippet or "").split())
-    if aspect_terms and aspect_terms.issubset(snippet_terms):
-        return "explicit"
-    return "implicit"
 
 
 def _dominant_sentiment(counter: Counter) -> str:
@@ -128,7 +98,7 @@ def build_single_review_graph(db: Session, review_id: int) -> dict | None:
     ordering: list[tuple[int, str]] = []
 
     for prediction in review.predictions:
-        aspect_id = _canonical_aspect(prediction)
+        aspect_id = canonical_aspect(prediction)
         span = min(
             prediction.evidence_spans,
             key=lambda item: (item.start_char, item.end_char),
@@ -137,13 +107,13 @@ def build_single_review_graph(db: Session, review_id: int) -> dict | None:
         start_char = span.start_char if span else len(review.text or "")
         end_char = span.end_char if span else start_char
         snippet = span.snippet if span else None
-        origin = _infer_origin(aspect_id, snippet)
+        origin = infer_origin(aspect_id, snippet)
 
         current = aspect_nodes.get(aspect_id)
         if current is None:
             aspect_nodes[aspect_id] = {
                 "id": aspect_id,
-                "label": _aspect_label(aspect_id),
+                "label": aspect_label(aspect_id),
                 "sentiment": prediction.sentiment,
                 "confidence": float(prediction.confidence or 0.0),
                 "explicit_count": 1 if origin == "explicit" else 0,
@@ -245,8 +215,8 @@ def build_batch_aspect_graph(
 ) -> dict:
     domain = _clean_filter_value(domain)
     product_id = _clean_filter_value(product_id)
-    f = _parse_dt(dt_from)
-    t = _parse_dt(dt_to)
+    f = parse_dt(dt_from)
+    t = parse_dt(dt_to)
     mode = (graph_mode or "accepted").strip().lower()
 
     if mode == "novel_side":
@@ -276,7 +246,7 @@ def build_batch_aspect_graph(
     if t:
         reviews_query = reviews_query.filter(Review.created_at <= t)
 
-    reviews = reviews_query.all()
+    reviews = reviews_query.order_by(Review.created_at.desc(), Review.id.desc()).limit(MAX_BATCH_GRAPH_REVIEWS).all()
 
     node_stats: dict[str, dict] = {}
     edge_weights: defaultdict[tuple[str, str], int] = defaultdict(int)
@@ -285,20 +255,20 @@ def build_batch_aspect_graph(
     for review in reviews:
         review_aspects = set()
         for prediction in review.predictions:
-            aspect_id = _canonical_aspect(prediction)
+            aspect_id = canonical_aspect(prediction)
             span = min(
                 prediction.evidence_spans,
                 key=lambda item: (item.start_char, item.end_char),
                 default=None,
             )
             snippet = span.snippet if span else None
-            origin = _infer_origin(aspect_id, snippet)
+            origin = infer_origin(aspect_id, snippet)
 
             stats = node_stats.setdefault(
                 aspect_id,
                 {
                     "id": aspect_id,
-                    "label": _aspect_label(aspect_id),
+                    "label": aspect_label(aspect_id),
                     "frequency": 0,
                     "explicit_count": 0,
                     "implicit_count": 0,
@@ -368,6 +338,8 @@ def build_batch_aspect_graph(
             "graph_mode": "accepted",
             "min_edge_weight": max(int(min_edge_weight or 1), 1),
             "time_bucket_ready": True,
+            "review_limit": MAX_BATCH_GRAPH_REVIEWS,
+            "truncated": len(reviews) >= MAX_BATCH_GRAPH_REVIEWS,
         },
         "nodes": nodes,
         "edges": edges,
@@ -395,7 +367,7 @@ def _build_batch_novel_graph(
         query = query.filter(Review.created_at >= f)
     if t:
         query = query.filter(Review.created_at <= t)
-    rows = query.all()
+    rows = query.order_by(Review.created_at.desc(), NovelCandidate.id.desc()).limit(MAX_BATCH_GRAPH_NOVEL_ROWS).all()
 
     aspects_by_review: dict[int, set[str]] = defaultdict(set)
     node_counts: Counter = Counter()
@@ -419,7 +391,7 @@ def _build_batch_novel_graph(
         nodes.append(
             {
                 "id": aspect,
-                "label": _aspect_label(aspect),
+                "label": aspect_label(aspect),
                 "frequency": int(count),
                 "avg_sentiment": 0.0,
                 "dominant_sentiment": "neutral",

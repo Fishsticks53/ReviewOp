@@ -18,6 +18,15 @@ try:
     from .progress import announce, task_bar
     from .quality_signals import example_quality_weight
     from .prototype_bank import PrototypeBank, build_global_prototype_bank
+    from .training_utils import (
+        clear_embedding_cache_if_trainable as _clear_embedding_cache_if_trainable,
+        collect_unique_items as _collect_unique_items,
+        composite_selection_score as _composite_selection_score,
+        joint_label_from_item as _joint_label_from_item,
+        build_offline_embedding_cache as _build_offline_embedding_cache,
+        warmup_batch_size as _warmup_batch_size,
+        warmup_label_cap as _warmup_label_cap,
+    )
 except ImportError:
     from config import ProtonetConfig
     from evaluator import evaluate_episodes
@@ -25,6 +34,15 @@ except ImportError:
     from progress import announce, task_bar
     from quality_signals import example_quality_weight
     from prototype_bank import PrototypeBank, build_global_prototype_bank
+    from training_utils import (
+        clear_embedding_cache_if_trainable as _clear_embedding_cache_if_trainable,
+        collect_unique_items as _collect_unique_items,
+        composite_selection_score as _composite_selection_score,
+        joint_label_from_item as _joint_label_from_item,
+        build_offline_embedding_cache as _build_offline_embedding_cache,
+        warmup_batch_size as _warmup_batch_size,
+        warmup_label_cap as _warmup_label_cap,
+    )
 
 
 @dataclass
@@ -37,69 +55,6 @@ class TrainingResult:
     val_predictions: List[Dict[str, Any]]
     test_predictions: List[Dict[str, Any]]
     prototype_bank: PrototypeBank
-
-
-def _composite_selection_score(metrics: Dict[str, Any]) -> float:
-    return float(
-        0.30 * float(metrics.get("accuracy", 0.0))
-        + 0.20 * float(metrics.get("macro_f1", 0.0))
-        + 0.12 * float(metrics.get("aspect_only_accuracy", metrics.get("accuracy", 0.0)))
-        + 0.13 * float(metrics.get("protocol_breakdown", {}).get("grouped", {}).get("accuracy", metrics.get("accuracy", 0.0)))
-        + 0.10 * float(metrics.get("protocol_breakdown", {}).get("grouped", {}).get("macro_f1", metrics.get("macro_f1", 0.0)))
-        + 0.05 * float(metrics.get("known_vs_novel_f1_macro", metrics.get("abstention_f1", 0.0)))
-        + 0.05 * float(metrics.get("abstention_f1", 0.0))
-        + 0.03 * float(1.0 - metrics.get("calibration_ece", 1.0))
-        + 0.02 * float(metrics.get("coverage", 0.0))
-    )
-
-
-def _joint_label_from_item(item: Dict[str, Any], separator: str) -> str:
-    label = item.get("joint_label")
-    if label:
-        return str(label)
-    aspect = str(item.get("aspect") or item.get("implicit_aspect") or "unknown").strip()
-    sentiment = str(item.get("sentiment") or "neutral").strip().lower() or "neutral"
-    return f"{aspect}{separator}{sentiment}"
-
-
-def _collect_unique_items(episodes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    seen: set[str] = set()
-    items: List[Dict[str, Any]] = []
-    for episode in episodes:
-        for item in list(episode.get("support_set", [])) + list(episode.get("query_set", [])):
-            key = str(item.get("example_id") or item.get("parent_review_id"))
-            if key in seen:
-                continue
-            seen.add(key)
-            items.append(dict(item))
-    return items
-
-
-def _build_offline_embedding_cache(model: ProtoNetModel, episodes_by_split: Dict[str, List[Dict[str, Any]]], cfg: ProtonetConfig) -> Dict[str, Any]:
-    # Safe only when encoder is frozen; otherwise embeddings drift each update.
-    if model.encoder.trainable:
-        return {"enabled": False, "reason": "encoder_trainable"}
-    all_items: List[Dict[str, Any]] = []
-    for split in ("train", "val", "test"):
-        all_items.extend(_collect_unique_items(episodes_by_split.get(split, [])))
-    if not all_items:
-        return {"enabled": False, "reason": "no_items"}
-
-    model.eval()
-    batch_size = 128 if cfg.device.type == "cuda" else 48
-    with torch.no_grad():
-        for idx in range(0, len(all_items), batch_size):
-            chunk = all_items[idx : idx + batch_size]
-            _ = model.encode_items(chunk)
-    cache_dir = cfg.output_dir / "embedding_cache"
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    snapshot = {
-        "enabled": True,
-        "items": len(model.precomputed_embeddings),
-        "splits": {split: len(episodes_by_split.get(split, [])) for split in ("train", "val", "test")},
-    }
-    (cache_dir / "summary.json").write_text(json.dumps(snapshot, indent=2), encoding="utf-8")
-    return snapshot
 
 
 def _supervised_contrastive_loss(embeddings: torch.Tensor, labels: List[str], temperature: float) -> torch.Tensor:
@@ -117,22 +72,6 @@ def _supervised_contrastive_loss(embeddings: torch.Tensor, labels: List[str], te
     mean_log_prob_pos = (positive_mask.float() * log_prob).sum(dim=1) / positive_mask.float().sum(dim=1).clamp(min=1.0)
     valid = positive_mask.any(dim=1)
     return -mean_log_prob_pos[valid].mean()
-
-
-def _warmup_label_cap(model: ProtoNetModel) -> int:
-    if model.encoder.backend == "transformer":
-        if model.cfg.device.type == "cpu":
-            return 4
-        return 8
-    return 12
-
-
-def _warmup_batch_size(model: ProtoNetModel) -> int:
-    if model.encoder.backend == "transformer":
-        if model.cfg.device.type == "cpu":
-            return 16
-        return 48
-    return 128
 
 
 def _use_cuda_amp(cfg: ProtonetConfig) -> bool:
@@ -345,6 +284,7 @@ def train_model(cfg: ProtonetConfig, episodes_by_split: Dict[str, List[Dict[str,
 
     for epoch in range(1, cfg.epochs + 1):
         announce(f"\n[train] Epoch {epoch}/{cfg.epochs} | Processing {len(train_episodes)} episodes...")
+        _clear_embedding_cache_if_trainable(model)
         model.train()
         running_loss = 0.0
         running_acc = 0.0
@@ -416,6 +356,7 @@ def train_model(cfg: ProtonetConfig, episodes_by_split: Dict[str, List[Dict[str,
                 break
 
     load_checkpoint(model, checkpoint_path)
+    _clear_embedding_cache_if_trainable(model)
     
     val_metrics, val_predictions = evaluate_episodes(model, episodes_by_split["val"], cfg, "val")
     test_metrics, test_predictions = evaluate_episodes(model, episodes_by_split["test"], cfg, "test")

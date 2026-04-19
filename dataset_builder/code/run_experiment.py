@@ -2,81 +2,51 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import asdict, replace
-import itertools
-import json
-import os
 from pathlib import Path
 from typing import Any
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from build_dataset import run_pipeline
-from contracts import BuilderConfig
-from experiments import run_experiments
-from research_stack import build_experiment_plan, benchmark_registry_payload, model_registry_payload
-from utils import stable_id, utc_now_iso, write_json, compress_output_folder
+try:
+    from .contracts import BuilderConfig
+    from .experiment_policy import (
+        QUALITY_GATES,
+        build_sweep_summary,
+        candidate_grid,
+        meets_quality_gates,
+        metrics_from_report,
+        run_ablation_matrix,
+    )
+    from .pipeline_runner import run_pipeline_sync
+    from .runtime_options import load_runtime_defaults, optional_env, resolve_artifact_mode, resolve_domain_conditioning_modes
+    from .experiments import run_experiments
+    from .research_stack import build_experiment_plan, benchmark_registry_payload, model_registry_payload
+    from .utils import stable_id, utc_now_iso, write_json, compress_output_folder
+except ImportError:  # pragma: no cover
+    from contracts import BuilderConfig
+    from experiment_policy import (
+        QUALITY_GATES,
+        build_sweep_summary,
+        candidate_grid,
+        meets_quality_gates,
+        metrics_from_report,
+        run_ablation_matrix,
+    )
+    from pipeline_runner import run_pipeline_sync
+    from runtime_options import load_runtime_defaults, optional_env, resolve_artifact_mode, resolve_domain_conditioning_modes
+    from experiments import run_experiments
+    from research_stack import build_experiment_plan, benchmark_registry_payload, model_registry_payload
+    from utils import stable_id, utc_now_iso, write_json, compress_output_folder
 
 try:
-    from llm_utils import flush_llm_cache
+    from .llm_utils import flush_llm_cache
 except Exception:  # pragma: no cover
-    def flush_llm_cache() -> None:
-        return None
-
-
-def _required_env(*names: str) -> str:
-    for name in names:
-        value = os.environ.get(name)
-        if value is not None and str(value).strip():
-            return str(value).strip()
-    primary = names[0] if names else "environment variable"
-    raise RuntimeError(f"{primary} is required in .env for dataset_builder")
-
-
-def _optional_env(*names: str, default: str | None = None) -> str | None:
-    for name in names:
-        value = os.environ.get(name)
-        if value is not None and str(value).strip():
-            return str(value).strip()
-    return default
-
-QUALITY_GATES = {
-    "fallback_only_rate_max": 0.22,
-    "needs_review_rows_max": 1800,
-    "generic_implicit_aspects_max": 0,
-    "rejected_implicit_aspects_max": 0,
-    "domain_leakage_row_rate_max": 0.06,
-    "grounded_prediction_rate_min": 0.75,
-    "train_general_dominance_rate_max": 0.2,
-    "train_domain_leakage_row_rate_max": 0.0,
-    "train_negative_ratio_min": 0.12,
-    "train_positive_ratio_min": 0.12,
-    "train_positive_ratio_max": 0.5,
-    "train_neutral_ratio_max": 0.58,
-    "train_target_size_compliant_required": 1,
-    "unseen_non_general_coverage_min": 0.55,
-    "unseen_implicit_not_ready_rate_max": 0.35,
-    "unseen_domain_leakage_row_rate_max": 0.02,
-    "gold_min_rows_for_promotion": 600,
-    "gold_aspect_f1_min": 0.55,
-    "gold_sentiment_f1_min": 0.55,
-    "gold_span_overlap_f1_min": 0.4,
-    "benchmark_implicit_purity_rate_min": 0.7,
-    "benchmark_ontology_compatibility_rate_min": 0.9,
-    "worst_domain_f1_min": 0.4,
-}
-NOVELTY_GATES = {
-    "required_ablations": ["explicit-only", "implicit-only", "no-grounding", "no-domain-conditioning", "llm-direct", "v6-full"],
-    "full_model_must_outperform_count": 4,
-}
-
-
-def _resolve_artifact_mode(*, run_profile: str, artifact_mode: str | None) -> str:
-    raw = str(artifact_mode or "auto").strip().lower()
-    if raw in {"debug_artifacts", "research_release"}:
-        return raw
-    return "debug_artifacts" if str(run_profile).strip().lower() == "debug" else "research_release"
-
+    try:
+        from llm_utils import flush_llm_cache
+    except Exception:  # pragma: no cover
+        def flush_llm_cache() -> None:
+            return None
 
 def _parse_bounded_int_list(raw: str, *, minimum: int, maximum: int, fallback: list[int]) -> list[int]:
     values: list[int] = []
@@ -94,229 +64,6 @@ def _parse_bounded_int_list(raw: str, *, minimum: int, maximum: int, fallback: l
     return unique_values or fallback
 
 
-def _load_runtime_defaults() -> dict[str, Any]:
-    defaults_path = Path(__file__).resolve().parent / "runtime_defaults.json"
-    if not defaults_path.exists():
-        return {}
-    try:
-        payload = json.loads(defaults_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {}
-    defaults = payload.get("defaults")
-    return defaults if isinstance(defaults, dict) else {}
-
-
-def _metrics_from_report(report: dict[str, Any]) -> dict[str, Any]:
-    quality = report.get("output_quality", {})
-    gold = report.get("gold_eval", {})
-    benchmark_gold = report.get("benchmark_gold_eval", {})
-    has_benchmark_gold = bool(benchmark_gold.get("has_gold_interpretations", False))
-    return {
-        "fallback_only_rate": float(quality.get("fallback_only_rate", 1.0)),
-        "needs_review_rows": int(quality.get("needs_review_rows", 10**9)),
-        "generic_implicit_aspects": int(quality.get("generic_implicit_aspects", 10**9)),
-        "rejected_implicit_aspects": int(quality.get("rejected_implicit_aspects", 10**9)),
-        "domain_leakage_row_rate": float(quality.get("domain_leakage_row_rate", 1.0)),
-        "grounded_prediction_rate": float(report.get("grounded_prediction_rate", 0.0)),
-        "train_general_dominance_rate": float(report.get("train_general_dominance_rate", 1.0)),
-        "train_domain_leakage_row_rate": float(report.get("train_domain_leakage_row_rate", 1.0)),
-        "train_negative_ratio": float(report.get("train_negative_ratio", 0.0)),
-        "train_positive_ratio": float(report.get("train_positive_ratio", 0.0)),
-        "train_neutral_ratio": float(report.get("train_sentiment_constraints", {}).get("achieved", {}).get("neutral_ratio", 1.0)),
-        "train_target_size_compliant": bool(report.get("train_target_stats", {}).get("size_within_target_range", False)),
-        "unseen_non_general_coverage": float(report.get("unseen_domain_metrics", {}).get("unseen_non_general_coverage", 0.0)),
-        "unseen_implicit_not_ready_rate": float(report.get("unseen_domain_metrics", {}).get("unseen_implicit_not_ready_rate", 1.0)),
-        "unseen_domain_leakage_row_rate": float(report.get("unseen_domain_metrics", {}).get("unseen_domain_leakage_row_rate", 1.0)),
-        "ungrounded_non_general_count": int(report.get("ungrounded_non_general_count", 10**9)),
-        "has_gold_eval": bool(gold.get("has_gold_labels", False) or has_benchmark_gold),
-        "has_benchmark_gold_eval": has_benchmark_gold,
-        "gold_rows": int(gold.get("num_rows_with_gold", 0) or benchmark_gold.get("num_rows_with_gold_interpretations", 0) or 0),
-        "gold_aspect_f1": float(gold.get("aspect_f1", 0.0)),
-        "gold_sentiment_f1": float(gold.get("sentiment_f1", 0.0)),
-        "gold_span_overlap_f1": float(gold.get("span_overlap_f1", 0.0)),
-        "benchmark_gold_rows": int(benchmark_gold.get("num_rows_with_gold_interpretations", 0) or 0),
-        "benchmark_average_gold_interpretations": float(benchmark_gold.get("average_gold_interpretations", 0.0)),
-        "benchmark_multi_gold_label_rate": float(benchmark_gold.get("multi_gold_label_rate", 0.0)),
-        "benchmark_grounded_evidence_rate": float(benchmark_gold.get("grounded_evidence_rate", 0.0)),
-        "benchmark_duplicate_interpretation_rate": float(benchmark_gold.get("duplicate_interpretation_rate", 0.0)),
-        "benchmark_implicit_purity_rate": float(benchmark_gold.get("implicit_purity_rate", 0.0)),
-        "benchmark_ontology_compatibility_rate": float(benchmark_gold.get("ontology_compatibility_rate", 0.0)),
-        "worst_domain_f1": float(report.get("robust_training_eval", {}).get("groupdro", {}).get("worst_domain_f1", 0.0)),
-        "promotion_guard_blocked": bool(report.get("promotion_guard", {}).get("blocked", False)),
-    }
-
-
-def _core_score(metrics: dict[str, Any]) -> float:
-    if metrics.get("has_gold_eval") and metrics.get("gold_rows", 0) > 0:
-        if any(float(metrics.get(key, 0.0)) > 0.0 for key in ("gold_aspect_f1", "gold_sentiment_f1", "gold_span_overlap_f1")):
-            return round(
-                (
-                    metrics.get("gold_aspect_f1", 0.0)
-                    + metrics.get("gold_sentiment_f1", 0.0)
-                    + metrics.get("gold_span_overlap_f1", 0.0)
-                ) / 3.0,
-                4,
-            )
-    if metrics.get("has_benchmark_gold_eval") and metrics.get("benchmark_gold_rows", 0) > 0:
-        return round(
-            (
-                float(metrics.get("benchmark_grounded_evidence_rate", 0.0))
-                + max(0.0, 1.0 - float(metrics.get("benchmark_duplicate_interpretation_rate", 1.0)))
-                + float(metrics.get("benchmark_multi_gold_label_rate", 0.0))
-            ) / 3.0,
-            4,
-        )
-
-    # Fallback proxy for novelty comparisons when gold labels are unavailable.
-    fallback_component = max(0.0, 1.0 - float(metrics.get("fallback_only_rate", 1.0)))
-    review_component = 1.0 / (1.0 + max(0, int(metrics.get("needs_review_rows", 0))))
-    grounding_component = max(0.0, min(1.0, float(metrics.get("grounded_prediction_rate", 0.0))))
-    return round(
-        (
-            fallback_component
-            + review_component
-            + grounding_component
-        ) / 3.0,
-        4,
-    )
-
-
-def _meets_quality_gates(metrics: dict[str, Any], *, quality_gates: dict[str, Any] = QUALITY_GATES) -> bool:
-    base_ok = (
-        metrics["fallback_only_rate"] <= quality_gates["fallback_only_rate_max"]
-        and metrics["needs_review_rows"] <= quality_gates["needs_review_rows_max"]
-        and metrics["generic_implicit_aspects"] <= quality_gates["generic_implicit_aspects_max"]
-        and metrics["rejected_implicit_aspects"] <= quality_gates["rejected_implicit_aspects_max"]
-        and metrics["domain_leakage_row_rate"] <= quality_gates["domain_leakage_row_rate_max"]
-        and metrics["grounded_prediction_rate"] >= quality_gates["grounded_prediction_rate_min"]
-        and metrics["train_general_dominance_rate"] <= quality_gates["train_general_dominance_rate_max"]
-        and metrics["train_domain_leakage_row_rate"] <= quality_gates["train_domain_leakage_row_rate_max"]
-        and metrics["train_negative_ratio"] >= quality_gates["train_negative_ratio_min"]
-        and metrics["train_positive_ratio"] >= quality_gates["train_positive_ratio_min"]
-        and metrics["train_positive_ratio"] <= quality_gates["train_positive_ratio_max"]
-        and metrics["train_neutral_ratio"] <= quality_gates["train_neutral_ratio_max"]
-        and int(bool(metrics["train_target_size_compliant"])) >= int(quality_gates["train_target_size_compliant_required"])
-        and metrics["unseen_non_general_coverage"] >= quality_gates["unseen_non_general_coverage_min"]
-        and metrics["unseen_implicit_not_ready_rate"] <= quality_gates["unseen_implicit_not_ready_rate_max"]
-        and metrics["unseen_domain_leakage_row_rate"] <= quality_gates["unseen_domain_leakage_row_rate_max"]
-    )
-    if not base_ok:
-        return False
-    if (not metrics["has_gold_eval"]) or metrics.get("gold_rows", 0) < int(quality_gates["gold_min_rows_for_promotion"]):
-        return False
-    return (
-        metrics["gold_aspect_f1"] >= quality_gates["gold_aspect_f1_min"]
-        and metrics["gold_sentiment_f1"] >= quality_gates["gold_sentiment_f1_min"]
-        and metrics["gold_span_overlap_f1"] >= quality_gates["gold_span_overlap_f1_min"]
-        and metrics["benchmark_implicit_purity_rate"] >= quality_gates["benchmark_implicit_purity_rate_min"]
-        and metrics["benchmark_ontology_compatibility_rate"] >= quality_gates["benchmark_ontology_compatibility_rate_min"]
-        and metrics["worst_domain_f1"] >= quality_gates["worst_domain_f1_min"]
-        and not metrics["promotion_guard_blocked"]
-    )
-
-
-def _rank_key(candidate: dict[str, Any]) -> tuple[Any, ...]:
-    return (
-        0 if candidate["meets_quality_gates"] else 1,
-        candidate["metrics"]["fallback_only_rate"],
-        candidate["metrics"]["needs_review_rows"],
-        candidate["metrics"]["generic_implicit_aspects"],
-        candidate["metrics"]["rejected_implicit_aspects"],
-        candidate["metrics"]["domain_leakage_row_rate"],
-        candidate["metrics"]["unseen_domain_leakage_row_rate"],
-        candidate["metrics"]["train_domain_leakage_row_rate"],
-        -candidate["metrics"]["unseen_non_general_coverage"],
-        candidate["metrics"]["unseen_implicit_not_ready_rate"],
-        -candidate["metrics"]["train_negative_ratio"],
-        -candidate["metrics"]["train_positive_ratio"],
-        candidate["metrics"]["train_neutral_ratio"],
-        0 if candidate["metrics"]["train_target_size_compliant"] else 1,
-        candidate["metrics"]["train_general_dominance_rate"],
-        -candidate["metrics"]["grounded_prediction_rate"],
-        -candidate["metrics"]["worst_domain_f1"],
-        1 if candidate["metrics"]["promotion_guard_blocked"] else 0,
-        0 if candidate["metrics"]["has_gold_eval"] else 1,
-        -candidate["metrics"]["gold_aspect_f1"],
-        -candidate["metrics"]["gold_sentiment_f1"],
-        -candidate["metrics"]["gold_span_overlap_f1"],
-        candidate["candidate_id"],
-    )
-
-
-def _run_ablation_matrix(cfg: BuilderConfig, run_dir: Path) -> dict[str, Any]:
-    ablation_configs: list[tuple[str, BuilderConfig]] = [
-        ("v6-full", replace(cfg, enable_reasoned_recovery=True)),
-        ("no-grounding", replace(cfg, enable_reasoned_recovery=True, enforce_grounding=False)),
-        ("no-domain-conditioning", replace(cfg, enable_reasoned_recovery=True, use_domain_conditioning=False)),
-        ("implicit-only", replace(cfg, enable_reasoned_recovery=True, use_domain_conditioning=True, enforce_grounding=True)),
-        ("explicit-only", replace(cfg, implicit_min_tokens=999, enforce_grounding=False, enable_llm_fallback=False, enable_reasoned_recovery=False)),
-        ("llm-direct", replace(cfg, implicit_mode="zeroshot", enable_llm_fallback=True, enable_reasoned_recovery=True, implicit_min_tokens=1)),
-    ]
-    rows: list[dict[str, Any]] = []
-    for name, ab_cfg in ablation_configs:
-        out_dir = run_dir / "ablations" / name
-        run_cfg = replace(ab_cfg, output_dir=out_dir, dry_run=False, preview_only=False)
-        report = run_pipeline(run_cfg)
-        metrics = _metrics_from_report(report)
-        rows.append({
-            "name": name,
-            "report_path": str(out_dir / "reports" / "build_report.json"),
-            "metrics": metrics,
-            "core_score": _core_score(metrics),
-        })
-    by_name = {row["name"]: row for row in rows}
-    full = by_name.get("v6-full")
-    outperform = 0
-    if full:
-        for name, row in by_name.items():
-            if name == "full":
-                continue
-            if full["core_score"] > row["core_score"]:
-                outperform += 1
-    summary = {
-        "required_ablations": NOVELTY_GATES["required_ablations"],
-        "ablation_rows": rows,
-        "full_model_outperform_count": outperform,
-        "novelty_gate_passed": outperform >= NOVELTY_GATES["full_model_must_outperform_count"],
-    }
-    write_json(run_dir / "ablation_summary.json", summary)
-    return summary
-
-
-def _bounded_v4_candidates(
-    include_coref: bool,
-    *,
-    implicit_min_tokens_values: list[int],
-    min_text_tokens_values: list[int],
-) -> list[dict[str, Any]]:
-    implicit_modes = ["zeroshot", "hybrid"]
-    confidence_thresholds = [0.55, 0.6]
-    llm_fallback_thresholds = [0.55, 0.6, 0.65]
-    use_coref_values = [False, True] if include_coref else [False]
-    candidates: list[dict[str, Any]] = []
-    for index, (implicit_mode, confidence_threshold, llm_fallback_threshold, use_coref, implicit_min_tokens, min_text_tokens) in enumerate(
-        itertools.product(
-            implicit_modes,
-            confidence_thresholds,
-            llm_fallback_thresholds,
-            use_coref_values,
-            implicit_min_tokens_values,
-            min_text_tokens_values,
-        ),
-        start=1,
-    ):
-        candidates.append({
-            "candidate_id": f"cand_{index:03d}",
-            "implicit_mode": implicit_mode,
-            "confidence_threshold": confidence_threshold,
-            "llm_fallback_threshold": llm_fallback_threshold,
-            "use_coref": use_coref,
-            "implicit_min_tokens": implicit_min_tokens,
-            "min_text_tokens": min_text_tokens,
-        })
-    return candidates
-
-
 def _execute_v4_sweep(
     cfg: BuilderConfig,
     run_dir: Path,
@@ -326,7 +73,7 @@ def _execute_v4_sweep(
     min_text_tokens_values: list[int],
     quality_gates: dict[str, Any] = QUALITY_GATES,
 ) -> dict[str, Any]:
-    candidates = _bounded_v4_candidates(
+    candidates = candidate_grid(
         include_coref=include_coref,
         implicit_min_tokens_values=implicit_min_tokens_values,
         min_text_tokens_values=min_text_tokens_values,
@@ -346,58 +93,32 @@ def _execute_v4_sweep(
             dry_run=False,
             preview_only=False,
         )
-        report = run_pipeline(candidate_cfg)
-        metrics = _metrics_from_report(report)
+        report = run_pipeline_sync(candidate_cfg)
+        metrics = metrics_from_report(report)
         candidate_results.append({
             **candidate,
             "output_dir": str(candidate_output_dir),
             "report_path": str(candidate_output_dir / "reports" / "build_report.json"),
             "metrics": metrics,
-            "meets_quality_gates": _meets_quality_gates(metrics, quality_gates=quality_gates),
+            "meets_quality_gates": meets_quality_gates(metrics, quality_gates=quality_gates),
             "generated_at": report.get("generated_at"),
             "validation": report.get("validation", {}),
         })
 
-    ranked = sorted(candidate_results, key=_rank_key)
-    best = ranked[0] if ranked else None
-    ablation_summary = _run_ablation_matrix(cfg, run_dir)
-    promoted_defaults = None
-    if best and best["meets_quality_gates"] and ablation_summary["novelty_gate_passed"]:
-        promoted_defaults = {
-            "implicit_mode": best["implicit_mode"],
-            "confidence_threshold": best["confidence_threshold"],
-            "llm_fallback_threshold": best["llm_fallback_threshold"],
-            "use_coref": best["use_coref"],
-            "implicit_min_tokens": best["implicit_min_tokens"],
-            "min_text_tokens": best["min_text_tokens"],
-        }
-
-    summary = {
-        "generated_at": utc_now_iso(),
-        "quality_gates": quality_gates,
-        "novelty_gates": NOVELTY_GATES,
-        "sweep_dimensions": {
-            "implicit_mode": ["zeroshot", "hybrid"],
-            "confidence_threshold": [0.55, 0.6],
-            "llm_fallback_threshold": [0.55, 0.6, 0.65],
-            "use_coref": [False, True] if include_coref else [False],
-            "implicit_min_tokens": implicit_min_tokens_values,
-            "min_text_tokens": min_text_tokens_values,
-        },
-        "candidate_count": len(candidate_results),
-        "meets_any_quality_gates": any(candidate["meets_quality_gates"] for candidate in candidate_results),
-        "best_candidate_id": best["candidate_id"] if best else None,
-        "best_candidate": best,
-        "promoted_defaults": promoted_defaults,
-        "ablation_summary": ablation_summary,
-        "ranked_candidates": ranked,
-    }
+    summary = build_sweep_summary(
+        cfg=cfg,
+        run_dir=run_dir,
+        candidate_results=candidate_results,
+        include_coref=include_coref,
+        ablation_summary=run_ablation_matrix(cfg, run_dir),
+        quality_gates=quality_gates,
+    )
     write_json(run_dir / "v4_sweep_results.json", summary)
     return summary
 
 
 def build_parser() -> argparse.ArgumentParser:
-    runtime_defaults = _load_runtime_defaults()
+    runtime_defaults = load_runtime_defaults()
     parser = argparse.ArgumentParser(description="Dataset builder research experiment runner")
     parser.add_argument("--input-dir", type=Path, default=None)
     parser.add_argument("--output-dir", type=Path, default=None)
@@ -449,11 +170,20 @@ def build_parser() -> argparse.ArgumentParser:
     # Backward-compatible alias for older scripts.
     parser.add_argument("--no-enable-reasoned_recovery", dest="enable_reasoned_recovery", action="store_false")
     parser.set_defaults(enable_reasoned_recovery=bool(runtime_defaults.get("enable_reasoned_recovery", True)))
-    parser.add_argument("--processor", type=str, default=_required_env("DATASET_BUILDER_PROCESSOR"), choices=["local", "runpod"])
+    parser.add_argument("--processor", type=str, default=optional_env("DATASET_BUILDER_PROCESSOR", default="local"), choices=["local", "runpod"])
+    parser.add_argument(
+        "--llm-provider",
+        "--llm-option",
+        dest="llm_provider",
+        type=str,
+        default=None,
+        choices=["auto", "none", "openai", "runpod", "ollama", "mock", "claude", "anthropic"],
+        help="LLM provider for fallback/reasoned recovery. Defaults to runpod when --processor runpod is used; otherwise disabled. --llm-option is a backward-compatible alias.",
+    )
     parser.add_argument(
         "--llm-model-name",
         type=str,
-        default=_optional_env("LLM_MODEL_NAME", "GROQ_MODEL", "OPENAI_MODEL", "OLLAMA_MODEL"),
+        default=optional_env("LLM_MODEL_NAME", "GROQ_MODEL", "OPENAI_MODEL", "OLLAMA_MODEL"),
     )
     parser.add_argument("--llm-api-key", type=str, default=None)
     parser.add_argument("--llm-base-url", type=str, default=None)
@@ -501,28 +231,24 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     load_dotenv()
     args = build_parser().parse_args(argv)
-    artifact_mode = _resolve_artifact_mode(run_profile=args.run_profile, artifact_mode=args.artifact_mode)
+    artifact_mode = resolve_artifact_mode(run_profile=args.run_profile, artifact_mode=args.artifact_mode)
     processor = str(args.processor or "").strip().lower()
     if processor not in {"local", "runpod"}:
         raise ValueError(f"Unsupported processor: {args.processor}")
-    llm_provider = "runpod" if processor == "runpod" else None
-    domain_conditioning_mode = str(args.domain_conditioning_mode or "").strip().lower()
-    if not args.use_domain_conditioning:
-        domain_conditioning_mode = "off"
-    elif args.strict_domain_conditioning and domain_conditioning_mode == "adaptive_soft":
-        domain_conditioning_mode = "strict_hard"
-    train_domain_conditioning_mode = str(args.train_domain_conditioning_mode or "").strip().lower() or None
-    eval_domain_conditioning_mode = str(args.eval_domain_conditioning_mode or "").strip().lower() or None
-    if train_domain_conditioning_mode is None or eval_domain_conditioning_mode is None:
-        if domain_conditioning_mode == "strict_hard":
-            train_domain_conditioning_mode = train_domain_conditioning_mode or "strict_hard"
-            eval_domain_conditioning_mode = eval_domain_conditioning_mode or "strict_hard"
-        elif domain_conditioning_mode == "off":
-            train_domain_conditioning_mode = train_domain_conditioning_mode or "off"
-            eval_domain_conditioning_mode = eval_domain_conditioning_mode or "off"
-        else:
-            train_domain_conditioning_mode = train_domain_conditioning_mode or "strict_hard"
-            eval_domain_conditioning_mode = eval_domain_conditioning_mode or "adaptive_soft"
+    llm_provider_choice = str(args.llm_provider or "").strip().lower()
+    if llm_provider_choice in {"", "none"}:
+        llm_provider = "runpod" if processor == "runpod" else None
+    elif llm_provider_choice == "auto":
+        llm_provider = "runpod" if processor == "runpod" else optional_env("DEFAULT_LLM_PROVIDER")
+    else:
+        llm_provider = llm_provider_choice
+    train_domain_conditioning_mode, eval_domain_conditioning_mode = resolve_domain_conditioning_modes(
+        domain_conditioning_mode=args.domain_conditioning_mode,
+        use_domain_conditioning=bool(args.use_domain_conditioning),
+        strict_domain_conditioning=bool(args.strict_domain_conditioning),
+        train_domain_conditioning_mode=args.train_domain_conditioning_mode,
+        eval_domain_conditioning_mode=args.eval_domain_conditioning_mode,
+    )
     cfg = BuilderConfig(
         input_dir=args.input_dir or BuilderConfig().input_dir,
         output_dir=args.output_dir or BuilderConfig().output_dir,
@@ -628,7 +354,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.execute_baseline:
         baseline_cfg = replace(cfg)
-        report = run_pipeline(baseline_cfg)
+        report = run_pipeline_sync(baseline_cfg)
         write_json(run_dir / "baseline_report.json", report)
         write_json(run_dir / "manifest.json", {
             "run_id": run_id,

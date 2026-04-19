@@ -54,10 +54,10 @@ export default function SearchResultsPage() {
     setRows([]);
     setHasMore(true);
     setLoading(true);
-    searchProducts(token, { q, min_rating: minRating, sort, offset: 0 })
+    searchProducts(token, { q, min_rating: minRating, sort, limit, offset: 0 })
       .then((data) => {
         setRows(data);
-        setHasMore(data.length === limit);
+        setHasMore(data.length >= limit);
       })
       .catch((ex) => setError(ex.message || "Search failed"))
       .finally(() => setLoading(false));
@@ -81,9 +81,9 @@ export default function SearchResultsPage() {
     if (loading || !hasMore) return;
     setLoading(true);
     try {
-      const more = await searchProducts(token, { q, min_rating: minRating, sort, offset: rows.length });
+      const more = await searchProducts(token, { q, min_rating: minRating, sort, limit, offset: rows.length });
       setRows((prev) => [...prev, ...more]);
-      setHasMore(more.length === limit);
+      setHasMore(more.length >= limit);
     } catch (ex) {
       setError(ex.message || "Failed to load more");
     } finally {

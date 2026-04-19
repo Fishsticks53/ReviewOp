@@ -17,6 +17,15 @@ try:
     from .novelty_utils import compute_novelty_score
     from .quality_signals import prediction_error_buckets, top_aspect_confusions
     from .progress import task_bar
+    from .evaluation_utils import (
+        aspect_from_joint as _aspect_from_joint,
+        compact_mode_metrics as _compact_mode_metrics,
+        decode_post_aspect_prediction as _decode_post_aspect_prediction,
+        diagnostic_summary as _diagnostic_summary,
+        expected_calibration_error as _expected_calibration_error,
+        project_prediction_rows as _project_prediction_rows,
+        stable_cluster_id as _stable_cluster_id,
+    )
 except ImportError:
     _config_path = Path(__file__).resolve().with_name("config.py")
     _config_spec = importlib.util.spec_from_file_location("protonet_local_config", _config_path)
@@ -29,177 +38,15 @@ except ImportError:
     from novelty_utils import compute_novelty_score
     from quality_signals import prediction_error_buckets, top_aspect_confusions
     from progress import task_bar
-
-
-def _aspect_from_joint(label: str, separator: str) -> str:
-    return label.split(separator, 1)[0]
-
-
-def _expected_calibration_error(confidences: List[float], correct: List[int], bins: int = 10) -> float:
-    if not confidences:
-        return 0.0
-    conf = np.asarray(confidences, dtype=float)
-    corr = np.asarray(correct, dtype=float)
-    edges = np.linspace(0.0, 1.0, bins + 1)
-    ece = 0.0
-    for i in range(bins):
-        left, right = edges[i], edges[i + 1]
-        mask = (conf >= left) & (conf < right if i < bins - 1 else conf <= right)
-        if not mask.any():
-            continue
-        bucket_conf = conf[mask].mean()
-        bucket_acc = corr[mask].mean()
-        ece += abs(bucket_acc - bucket_conf) * (mask.sum() / len(conf))
-    return float(ece)
-
-
-def _diagnostic_summary(rows: List[Dict[str, Any]], separator: str) -> Dict[str, Any]:
-    return {
-        "error_buckets": prediction_error_buckets(rows),
-        "top_aspect_confusions": top_aspect_confusions(rows, separator=separator, limit=5),
-    }
-
-
-def _stable_cluster_id(*, domain: str, hint: str) -> str:
-    basis = f"v2-novel-cluster|{str(domain).strip().lower()}|{str(hint).strip().lower()}"
-    return f"novel_{hashlib.sha1(basis.encode('utf-8')).hexdigest()[:12]}"
-
-
-def _decode_post_aspect_prediction(
-    probabilities: np.ndarray,
-    ordered_labels: List[str],
-    *,
-    separator: str,
-    multi_label_margin: float,
-) -> dict[str, Any]:
-    aspect_best: dict[str, tuple[float, int]] = {}
-    for idx, label in enumerate(ordered_labels):
-        aspect = _aspect_from_joint(label, separator)
-        score = float(probabilities[idx])
-        current = aspect_best.get(aspect)
-        if current is None or score > current[0]:
-            aspect_best[aspect] = (score, idx)
-    if not aspect_best:
-        return {
-            "pred_label": "",
-            "pred_labels": [],
-            "confidence": 0.0,
-            "selected_aspects": [],
-            "aspect": "",
-            "sentiment": "neutral",
-        }
-
-    ranked = sorted(aspect_best.items(), key=lambda item: item[1][0], reverse=True)
-    top_score = ranked[0][1][0]
-    selected = [item for item in ranked if item[1][0] >= top_score - float(multi_label_margin)]
-    selected.sort(key=lambda item: item[1][0], reverse=True)
-    pred_labels = [ordered_labels[idx] for _, (_, idx) in selected]
-    best_aspect, (best_score, best_index) = ranked[0]
-    best_label = ordered_labels[best_index]
-    aspect = _aspect_from_joint(best_label, separator)
-    sentiment = best_label.split(separator, 1)[1] if separator in best_label else "neutral"
-    return {
-        "pred_label": best_label,
-        "pred_labels": pred_labels,
-        "confidence": float(best_score),
-        "selected_aspects": [aspect_name for aspect_name, _ in selected],
-        "aspect": aspect or best_aspect,
-        "sentiment": sentiment,
-    }
-
-
-def _project_prediction_rows(rows: List[Dict[str, Any]], mode: str) -> List[Dict[str, Any]]:
-    if mode == "joint":
-        return list(rows)
-    if mode != "post_aspect":
-        return list(rows)
-    projected: List[Dict[str, Any]] = []
-    for row in rows:
-        pred_label = str(row.get("post_aspect_pred_label") or row.get("pred_label") or "")
-        pred_labels = list(row.get("post_aspect_pred_labels") or ([pred_label] if pred_label else []))
-        projected.append(
-            {
-                **row,
-                "pred_label": pred_label,
-                "pred_labels": pred_labels,
-                "confidence": float(row.get("post_aspect_confidence", row.get("confidence", 0.0))),
-                "correct": bool(row.get("post_aspect_correct", row.get("correct", False))),
-                "flex_correct": bool(row.get("post_aspect_flex_correct", row.get("flex_correct", False))),
-                "multi_label_overlap": float(row.get("post_aspect_multi_label_overlap", row.get("multi_label_overlap", 0.0))),
-                "abstained": bool(row.get("post_aspect_abstained", row.get("abstained", False))),
-                "low_confidence": bool(row.get("post_aspect_low_confidence", row.get("low_confidence", False))),
-            }
-        )
-    return projected
-
-
-def _compact_mode_metrics(
-    rows: List[Dict[str, Any]],
-    cfg: ProtonetConfig,
-    split_name: str,
-    *,
-    mode: str,
-    elapsed: float,
-    episodes: List[Dict[str, Any]],
-) -> Dict[str, Any]:
-    if not rows:
-        return {
-            "split": split_name,
-            "num_episodes": len(episodes),
-            "num_queries": 0,
-            "accuracy": 0.0,
-            "aspect_only_accuracy": 0.0,
-            "macro_f1": 0.0,
-            "flexible_match_score": 0.0,
-            "multi_label_overlap_score": 0.0,
-            "abstention_precision": 0.0,
-            "abstention_recall": 0.0,
-            "abstention_f1": 0.0,
-            "coverage": 0.0,
-            "risk": 0.0,
-            "low_confidence_rate": 0.0,
-            "selected_mode": mode,
-        }
-    y_true = [str(row.get("true_label") or "") for row in rows]
-    y_pred = [str(row.get("pred_label") or "") for row in rows]
-    y_true_aspect = [_aspect_from_joint(label, cfg.joint_label_separator) for label in y_true]
-    y_pred_aspect = [_aspect_from_joint(label, cfg.joint_label_separator) for label in y_pred]
-    correctness = [int(row.get("correct", False)) for row in rows]
-    low_confidence_count = sum(1 for row in rows if bool(row.get("abstained", False)))
-    abstain_true_positive = sum(1 for row in rows if bool(row.get("abstained", False)) and not bool(row.get("correct", False)))
-    abstain_false_positive = sum(1 for row in rows if bool(row.get("abstained", False)) and bool(row.get("correct", False)))
-    abstain_false_negative = sum(1 for row in rows if not bool(row.get("abstained", False)) and not bool(row.get("correct", False)))
-    confidence_error = _expected_calibration_error([float(row.get("confidence", 0.0)) for row in rows], correctness)
-    coverage = 1.0 - (low_confidence_count / max(1, len(rows)))
-    risk = 1.0 - (sum(correctness) / max(1, len(rows)))
-    return {
-        "split": split_name,
-        "num_episodes": len(episodes),
-        "num_queries": len(rows),
-        "accuracy": float(accuracy_score(y_true, y_pred)) if y_true else 0.0,
-        "aspect_only_accuracy": float(accuracy_score(y_true_aspect, y_pred_aspect)) if y_true else 0.0,
-        "macro_f1": float(f1_score(y_true, y_pred, average="macro")) if y_true else 0.0,
-        "flexible_match_score": float(np.mean([1.0 if row.get("flex_correct") else 0.0 for row in rows])) if rows else 0.0,
-        "multi_label_overlap_score": float(np.mean([float(row.get("multi_label_overlap", 0.0)) for row in rows])) if rows else 0.0,
-        "abstention_precision": abstain_true_positive / max(1, abstain_true_positive + abstain_false_positive),
-        "abstention_recall": abstain_true_positive / max(1, abstain_true_positive + abstain_false_negative),
-        "abstention_f1": (
-            2
-            * (abstain_true_positive / max(1, abstain_true_positive + abstain_false_positive))
-            * (abstain_true_positive / max(1, abstain_true_positive + abstain_false_negative))
-            / max(
-                1e-12,
-                (abstain_true_positive / max(1, abstain_true_positive + abstain_false_positive))
-                + (abstain_true_positive / max(1, abstain_true_positive + abstain_false_negative)),
-            )
-        ),
-        "coverage": float(coverage),
-        "risk": float(risk),
-        "low_confidence_rate": low_confidence_count / max(1, len(rows)),
-        "calibration_ece": float(confidence_error),
-        **_diagnostic_summary(rows, cfg.joint_label_separator),
-        "selected_mode": mode,
-    }
+    from evaluation_utils import (
+        aspect_from_joint as _aspect_from_joint,
+        compact_mode_metrics as _compact_mode_metrics,
+        decode_post_aspect_prediction as _decode_post_aspect_prediction,
+        diagnostic_summary as _diagnostic_summary,
+        expected_calibration_error as _expected_calibration_error,
+        project_prediction_rows as _project_prediction_rows,
+        stable_cluster_id as _stable_cluster_id,
+    )
 
 
 def evaluate_episodes(
@@ -235,6 +82,7 @@ def evaluate_episodes(
         with task_bar(total=len(episodes), desc=f"eval:{split_name}", enabled=cfg.progress_enabled) as bar:
             for episode in episodes:
                 out = model.episode_forward(episode)
+                dist2_queries = torch.cdist(out.query_embeddings, out.prototypes, p=2).pow(2)
                 probs = out.probabilities.numpy()
                 target_indices = out.targets.detach().cpu().tolist()
                 query_rows = list(episode.get("query_set", []))
@@ -288,15 +136,18 @@ def evaluate_episodes(
                     
                     pred_set = {pred_label}
                     jaccard = len(true_set & pred_set) / max(1, len(true_set | pred_set))
-                    row_logits = out.logits[row_index].detach().cpu()
-                    max_logit = float(row_logits.max().item())
-                    min_distance_sq = max(0.0, -max_logit * eval_temperature)
+                    # Novelty components should not depend on any episodic temperature scaling
+                    # (e.g. entropy-based scaling inside episode_forward). Compute directly from
+                    # distances so evaluator and runtime_infer stay aligned.
+                    dist2 = dist2_queries[row_index : row_index + 1]
+                    min_distance_sq = float(dist2.min().item())
                     distance_score = max(0.0, min(1.0, min_distance_sq / (min_distance_sq + 1.0)))
                     ranked_probs = np.sort(probs[row_index])[::-1]
                     p_top1 = float(ranked_probs[0]) if len(ranked_probs) > 0 else 0.0
                     p_top2 = float(ranked_probs[1]) if len(ranked_probs) > 1 else 0.0
                     ambiguity_score = max(0.0, min(1.0, 1.0 - (p_top1 - p_top2)))
-                    energy_raw = float((-eval_temperature * torch.logsumexp(row_logits, dim=0)).item())
+                    energy_logits = -dist2 / max(1e-6, float(eval_temperature))
+                    energy_raw = float((-eval_temperature * torch.logsumexp(energy_logits, dim=-1))[0].item())
                     energy_score = max(0.0, min(1.0, (energy_raw + 5.0) / 10.0))
                     novelty_score = compute_novelty_score(distance_score, ambiguity_score, energy_score)
                     split_protocol = query_row.get("split_protocol") if isinstance(query_row, dict) else {}

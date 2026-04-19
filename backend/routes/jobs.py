@@ -8,12 +8,13 @@ from models.schemas import JobStatusOut
 from models.tables import Job
 
 from services.kg_build import KGBuilder, KGConfig
+from routes.user_portal import require_admin
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
 @router.get("/{job_id}", response_model=JobStatusOut)
-def get_job(job_id: str, db: Session = Depends(get_db)):
+def get_job(job_id: str, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -29,7 +30,7 @@ def get_job(job_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/kg_rebuild")
-def kg_rebuild(domain: str | None = None, db: Session = Depends(get_db)):
+def kg_rebuild(domain: str | None = None, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     """
     Rebuilds:
     - aspect graph (similarity + cooccurrence)

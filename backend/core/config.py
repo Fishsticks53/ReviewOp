@@ -1,13 +1,15 @@
-import os
 from pathlib import Path
 from typing import ClassVar, Optional
 
+from sqlalchemy.engine import URL
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 def _env_int(key: str, default: int) -> int:
-    val = os.getenv(key)
+    from os import getenv
+
+    val = getenv(key)
     if not val:
         return default
     try:
@@ -27,11 +29,11 @@ class Settings(BaseSettings):
     )
 
     # MySQL
-    mysql_host: str = Field(default_factory=lambda: os.getenv("MYSQL_HOST", ""))
-    mysql_port: int = Field(default_factory=lambda: _env_int("MYSQL_PORT", 3306))
-    mysql_user: str = Field(default_factory=lambda: os.getenv("MYSQL_USER", ""))
-    mysql_password: str = Field(default_factory=lambda: os.getenv("MYSQL_PASSWORD", ""))
-    mysql_db: str = Field(default_factory=lambda: os.getenv("MYSQL_DB", ""))
+    mysql_host: str = ""
+    mysql_port: int = 3306
+    mysql_user: str = ""
+    mysql_password: str = ""
+    mysql_db: str = ""
 
     # Seq2Seq
     seq2seq_model_name: str = Field(
@@ -116,16 +118,18 @@ class Settings(BaseSettings):
 
     @property
     def mysql_url(self) -> str:
-        # SQLAlchemy URL
-        # mysql+pymysql://user:pass@host:port/dbname?charset=utf8mb4
-        user = self.mysql_user
-        pw = self.mysql_password
-        host = self.mysql_host
-        port = self.mysql_port
-        db = self.mysql_db
-        if not all([user, pw, host, db]):
+        if not all([self.mysql_user, self.mysql_password, self.mysql_host, self.mysql_db]):
             raise RuntimeError("MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD, and MYSQL_DB must be set")
-        return f"mysql+pymysql://{user}:{pw}@{host}:{port}/{db}?charset=utf8mb4"
+        url = URL.create(
+            "mysql+pymysql",
+            username=self.mysql_user,
+            password=self.mysql_password,
+            host=self.mysql_host,
+            port=self.mysql_port,
+            database=self.mysql_db,
+            query={"charset": "utf8mb4"},
+        )
+        return str(url)
 
     @property
     def protonet_implicit_min_confidence(self) -> float:

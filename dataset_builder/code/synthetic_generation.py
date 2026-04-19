@@ -4,7 +4,10 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Any
 
-from utils import normalize_whitespace, tokenize, write_jsonl
+try:
+    from .utils import normalize_whitespace, tokenize, write_jsonl
+except ImportError:  # pragma: no cover
+    from utils import normalize_whitespace, tokenize, write_jsonl
 
 
 DEFAULT_DOMAIN_ASPECTS: dict[str, list[str]] = {

@@ -17,7 +17,13 @@ from services.open_aspect import extract_open_aspects
 
 
 def _safe_extract_aspects(text: str, max_aspects: int = 8) -> list[str]:
-    aspects = extract_open_aspects(text, max_aspects=max_aspects)
+    logger = logging.getLogger(__name__)
+    try:
+        aspects = extract_open_aspects(text, max_aspects=max_aspects)
+    except Exception as exc:
+        # Open-aspect extraction is optional; don't hard-fail inference if a local model is missing.
+        logger.warning("Open-aspect extraction failed (%s); falling back to ['general']", type(exc).__name__)
+        return ["general"]
     if aspects:
         return aspects
     return ["general"]
@@ -52,6 +58,57 @@ def run_single_review_pipeline(
             if old_preds:
                 db.flush()
             db.expire(review, ["predictions"])
+
+    aspects = _safe_extract_aspects(clean_text, max_aspects=8)
+
+    for aspect_raw in aspects:
+        start_char, end_char, snippet = find_evidence_for_aspect(clean_text, aspect_raw)
+        sent, conf = engine.classify_sentiment_with_confidence(snippet, aspect_raw)
+
+        pred = Prediction(
+            aspect_raw=aspect_raw,
+            aspect_cluster=aspect_raw,
+            sentiment=sent,
+            confidence=float(conf),
+            rationale=None,
+        )
+        pred.review = review
+        pred.evidence_spans.append(
+            EvidenceSpan(
+                start_char=start_char,
+                end_char=end_char,
+                snippet=snippet,
+            )
+        )
+        db.add(pred)
+
+    db.flush()
+    return review
+
+
+def run_single_review_pipeline_for_existing_review(
+    db: Session,
+    *,
+    review: Review,
+    engine,
+    text: str,
+    domain: str | None = None,
+    product_id: str | None = None,
+) -> Review:
+    clean_text = (text or "").strip()
+    review.text = clean_text
+    review.domain = domain
+    review.product_id = product_id
+
+    old_preds = db.query(Prediction).filter(Prediction.review_id == review.id).all()
+    old_pred_ids = [pred.id for pred in old_preds if pred.id is not None]
+    if old_pred_ids:
+        db.execute(delete(EvidenceSpan).where(EvidenceSpan.prediction_id.in_(old_pred_ids)))
+    for pred in old_preds:
+        db.delete(pred)
+    if old_preds:
+        db.flush()
+    db.expire(review, ["predictions"])
 
     aspects = _safe_extract_aspects(clean_text, max_aspects=8)
 
@@ -149,14 +206,16 @@ def schedule_corpus_graph_refresh(domain: str | None) -> threading.Thread:
     thread_name = f"corpus-graph-refresh-{domain or 'all'}-{int(time.time() * 1000)}"
 
     def _worker() -> None:
-        db = SessionLocal()
         started_at = time.perf_counter()
+        db = None
         try:
+            db = SessionLocal()
             refresh_corpus_graph(db, domain=domain)
         except Exception:
             logger.exception("Failed refreshing corpus graph in background task")
         finally:
-            db.close()
+            if db is not None:
+                db.close()
             logger.info(
                 "Background corpus graph task closed%s after %.3fs",
                 f" for domain={domain}" if domain else "",

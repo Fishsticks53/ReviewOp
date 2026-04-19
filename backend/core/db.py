@@ -1,4 +1,6 @@
 # proto/backend/core/db.py
+import pymysql
+
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url, URL
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
@@ -7,6 +9,19 @@ from core.config import settings
 
 class Base(DeclarativeBase):
     pass
+
+
+def _pymysql_connect(*, database: str | None = None):
+    return pymysql.connect(
+        host=settings.mysql_host,
+        port=settings.mysql_port,
+        user=settings.mysql_user,
+        password=settings.mysql_password,
+        database=database,
+        charset="utf8mb4",
+        autocommit=False,
+        connect_timeout=10,
+    )
 
 
 def ensure_database_exists() -> None:
@@ -21,19 +36,12 @@ def ensure_database_exists() -> None:
     safe_db_name = db_name.replace("`", "``")
 
     # Connect to MySQL server without selecting a specific database.
-    admin_url = URL.create(
-        drivername=url.drivername,
-        username=url.username,
-        password=url.password,
-        host=url.host,
-        port=url.port,
-        query=url.query,
-    )
     admin_engine = create_engine(
-        admin_url,
+        settings.mysql_url,
         pool_pre_ping=True,
         pool_recycle=3600,
         echo=False,
+        creator=lambda: _pymysql_connect(),
     )
 
     with admin_engine.begin() as conn:
@@ -49,6 +57,7 @@ engine = create_engine(
     pool_pre_ping=True,
     pool_recycle=3600,
     echo=False,
+    creator=lambda: _pymysql_connect(database=make_url(settings.mysql_url).database),
 )
 
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)

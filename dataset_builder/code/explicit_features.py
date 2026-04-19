@@ -7,7 +7,10 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 
-from utils import normalize_whitespace, token_count
+try:
+    from .utils import normalize_whitespace, token_count
+except ImportError:  # pragma: no cover
+    from utils import normalize_whitespace, token_count
 
 
 @dataclass

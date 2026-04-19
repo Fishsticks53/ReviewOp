@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { getProductDetail, getProductReviews } from "../../api/client";
 import { useAuth } from "../../auth/AuthContext";
 import UserShell from "../../components/user/UserShell";
-import { DEFAULT_SEARCH_SORT, updateSearchParams } from "./searchState";
+import { DEFAULT_SEARCH_SORT, normalizeMinRating, normalizeSort, updateSearchParams } from "./searchState";
 
 export default function ProductPage() {
   const { productId } = useParams();
@@ -15,9 +15,9 @@ export default function ProductPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState("");
-  const minRating = Number(params.get("min_rating") || "1");
+  const minRating = normalizeMinRating(params.get("min_rating"), 1, 1, 5);
   const selectedAspect = params.get("aspect") || "";
-  const sort = params.get("sort") || DEFAULT_SEARCH_SORT;
+  const sort = normalizeSort(params.get("sort"), DEFAULT_SEARCH_SORT);
   const pageSize = 5;
   const hasActiveFilters = minRating !== 1 || Boolean(selectedAspect) || sort !== "most_recent";
 
@@ -27,8 +27,6 @@ export default function ProductPage() {
 
   function resetFilters() {
     setError("");
-    setReviews([]);
-    setHasMore(true);
     setParams(new URLSearchParams(), { replace: true });
   }
 

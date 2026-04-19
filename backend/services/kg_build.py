@@ -80,6 +80,7 @@ def _normalize_aspect(s: str) -> str:
 class KGConfig:
     similarity_threshold: float = 0.75
     max_aspects_for_similarity: int = 5000
+    similarity_top_k: int = 25
     alpha_evidence: float = 0.55
     beta_centrality: float = 0.25
     gamma_idf: float = 0.20
@@ -151,7 +152,7 @@ class KGBuilder:
         db.flush()
 
         # 3️⃣ Similarity Graph
-        sim_graph = self._build_similarity_graph(unique_aspects, cfg.similarity_threshold)
+        sim_graph = self._build_similarity_graph(unique_aspects, cfg.similarity_threshold, top_k=cfg.similarity_top_k)
 
         # 4️⃣ Co-occurrence Graph
         co_graph = self._build_cooccurrence_graph(by_review)
@@ -261,7 +262,7 @@ class KGBuilder:
 
         return nodes, edges
 
-    def _build_similarity_graph(self, aspects: List[str], threshold: float) -> nx.Graph:
+    def _build_similarity_graph(self, aspects: List[str], threshold: float, top_k: int = 25) -> nx.Graph:
         g = nx.Graph()
         for a in aspects:
             g.add_node(a)
@@ -274,8 +275,12 @@ class KGBuilder:
         sim = emb @ emb.T
 
         n = len(aspects)
+        top_k = max(1, min(int(top_k or 25), max(1, n - 1)))
         for i in range(n):
-            for j in range(i + 1, n):
+            candidate_indices = np.argpartition(sim[i], -min(top_k + 1, n))[-min(top_k + 1, n):]
+            for j in candidate_indices:
+                if j <= i:
+                    continue
                 w = float(sim[i, j])
                 if w >= threshold:
                     g.add_edge(aspects[i], aspects[j], weight=w)

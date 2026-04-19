@@ -24,9 +24,14 @@ export default function SubmitReviewPage() {
 
   const editReviewId = params.get("edit_review_id");
   const prefill = location.state?.prefill || null;
+  const hasPrefill = Boolean(prefill);
   const initialProductId = productId || params.get("product_id") || prefill?.product_id || "";
   const initialProductName = params.get("product_name") || location.state?.productName || "";
-  const draft = loadDraft();
+  const draft = useMemo(() => {
+    // Drafts are for "create" only; never blend them into edit/prefill flows.
+    if (editReviewId || hasPrefill) return null;
+    return loadDraft();
+  }, [editReviewId, hasPrefill]);
 
   const [productRef, setProductRef] = useState(prefill?.product_id || draft?.productRef || initialProductId);
   const [productName, setProductName] = useState(prefill?.product_name || draft?.productName || initialProductName);
@@ -125,7 +130,6 @@ export default function SubmitReviewPage() {
     try {
       if (isEditMode) {
         await updateMyReview(token, Number(editReviewId), payload);
-        localStorage.removeItem(DRAFT_KEY);
         nav("/my-reviews");
       } else {
         await submitReview(token, payload);

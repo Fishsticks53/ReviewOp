@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from models.tables import AbstainedPrediction, EvidenceSpan, NovelCandidate, Prediction
 from services.hybrid_merge import merge_predictions
-from services.review_pipeline import run_single_review_pipeline, split_selective_states
+from services.review_pipeline import run_single_review_pipeline, run_single_review_pipeline_for_existing_review, split_selective_states
 
 PredictionLike = Dict[str, Any]
 
@@ -126,15 +126,27 @@ def run_single_review_hybrid_pipeline(
     text: str,
     domain: str | None = None,
     product_id: str | None = None,
+    review=None,
+    replace_existing: bool = False,
 ) -> Tuple[Any, List[PredictionLike], List[PredictionLike], List[PredictionLike]]:
     # Step A: run your existing explicit pipeline and persist review/predictions as before
-    review_obj = run_single_review_pipeline(
-        db,
-        engine=explicit_engine,
-        text=text,
-        domain=domain,
-        product_id=product_id,
-    )
+    if review is None:
+        review_obj = run_single_review_pipeline(
+            db,
+            engine=explicit_engine,
+            text=text,
+            domain=domain,
+            product_id=product_id,
+        )
+    else:
+        review_obj = run_single_review_pipeline_for_existing_review(
+            db,
+            review=review,
+            engine=explicit_engine,
+            text=text,
+            domain=domain,
+            product_id=product_id,
+        )
 
     explicit_predictions: List[PredictionLike] = [
         _prediction_row_to_dict(pred) for pred in getattr(review_obj, "predictions", []) or []

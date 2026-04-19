@@ -10,7 +10,10 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
 
-from utils import normalize_whitespace, split_sentences, tokenize
+try:
+    from .utils import normalize_whitespace, split_sentences, tokenize
+except ImportError:  # pragma: no cover
+    from utils import normalize_whitespace, split_sentences, tokenize
 
 
 POSITIVE_WORDS = {
@@ -558,7 +561,10 @@ async def build_implicit_row(
     discovery_mode: bool = False,
     discovery_min_confidence: float = 0.55,
 ) -> Dict[str, Any]:
-    from llm_utils import AsyncRunPodProvider, reason_implicit_signal_async, discover_novel_aspects_async
+    try:
+        from .llm_utils import AsyncRunPodProvider, reason_implicit_signal_async, discover_novel_aspects_async
+    except ImportError:  # pragma: no cover
+        from llm_utils import AsyncRunPodProvider, reason_implicit_signal_async, discover_novel_aspects_async
 
     mode = _canonical_mode(implicit_mode)
     raw_text = normalize_whitespace(row.get(text_column, ""))
@@ -851,7 +857,10 @@ async def build_implicit_row(
 
 def flush_llm_cache() -> None:
     """Flushes any local LLM response caches to ensure fresh research trials."""
-    from llm_utils import GLOBAL_LLM_CACHE
+    try:
+        from .llm_utils import GLOBAL_LLM_CACHE
+    except ImportError:  # pragma: no cover
+        from llm_utils import GLOBAL_LLM_CACHE
     if GLOBAL_LLM_CACHE:
         GLOBAL_LLM_CACHE.clear()
 

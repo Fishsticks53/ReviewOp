@@ -5,7 +5,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, BackgroundTasks, Request
 from sqlalchemy import and_, case, desc, func, or_, select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, aliased, selectinload
 
 from core.db import get_db
 from models.schemas import (
@@ -30,7 +30,8 @@ from models.tables import (
     UserProductReview,
 )
 from services.auth import IdentityManager
-from services.review_pipeline import _refresh_corpus_graph_task, run_single_review_pipeline
+from services.hybrid_pipeline import run_single_review_hybrid_pipeline
+from services.review_pipeline import _refresh_corpus_graph_task
 
 
 router = APIRouter(prefix="/user", tags=["user_portal"])
@@ -92,6 +93,12 @@ def get_current_user(
 def require_user(current: User = Depends(get_current_user)) -> User:
     if current.role != "user":
         raise HTTPException(status_code=403, detail="User role required")
+    return current
+
+
+def require_admin(current: User = Depends(get_current_user)) -> User:
+    if current.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required")
     return current
 
 
@@ -180,6 +187,10 @@ def _row_to_product_review_out(row, aspects: list[AspectSummaryOut], reply_title
     )
 
 
+def _active_review_filter():
+    return UserProductReview.deleted_at.is_(None)
+
+
 def _apply_cached_product_delta(
     product: ProductCatalog,
     *,
@@ -206,6 +217,32 @@ def _apply_cached_product_delta(
         product.cached_latest_review_at = latest_review_at
 
 
+def _recompute_product_cache(db: Session, product: ProductCatalog) -> None:
+    stats = (
+        db.query(
+            func.avg(UserProductReview.rating).label("avg_rating"),
+            func.count(UserProductReview.id).label("total"),
+            func.sum(UserProductReview.helpful_count).label("helpful"),
+            func.max(UserProductReview.created_at).label("latest"),
+        )
+        .filter(UserProductReview.product_id == product.product_id, _active_review_filter())
+        .first()
+    )
+    product.cached_average_rating = float(stats.avg_rating or 0.0)
+    product.cached_review_count = int(stats.total or 0)
+    product.cached_helpful_count = int(stats.helpful or 0)
+    product.cached_latest_review_at = stats.latest
+    product.updated_at = datetime.utcnow()
+
+
+def _recompute_product_cache_for_review(db: Session, review: UserProductReview | None) -> None:
+    if not review:
+        return
+    product = db.query(ProductCatalog).filter(ProductCatalog.product_id == review.product_id).first()
+    if product:
+        _recompute_product_cache(db, product)
+
+
 def _lock_reply_context(
     clean_product_id: str,
     clean_product_name: str,
@@ -227,7 +264,7 @@ def product_suggestions(
         pid.strip()
         for (pid,) in (
             db.query(UserProductReview.product_id)
-            .filter(UserProductReview.user_id == current.id)
+            .filter(UserProductReview.user_id == current.id, _active_review_filter())
             .order_by(desc(UserProductReview.created_at))
             .limit(8)
             .all()
@@ -299,6 +336,7 @@ def search_products(
         user_review_product_ids = (
             select(UserProductReview.product_id)
             .where(
+                _active_review_filter(),
                 or_(
                     UserProductReview.title.ilike(like, escape="\\"),
                     UserProductReview.review_text.ilike(like, escape="\\"),
@@ -340,13 +378,10 @@ def product_detail(
     product = db.query(ProductCatalog).filter(ProductCatalog.product_id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="product not found")
+    _recompute_product_cache(db, product)
 
-    # Combined query for stats and counts per star
     stats = (
         db.query(
-            func.avg(UserProductReview.rating).label("avg_rating"),
-            func.count(UserProductReview.id).label("total"),
-            # Distribution aggregation
             func.count(case((UserProductReview.rating == 5, 1))).label("s5"),
             func.count(case((UserProductReview.rating == 4, 1))).label("s4"),
             func.count(case((UserProductReview.rating == 3, 1))).label("s3"),
@@ -354,6 +389,7 @@ def product_detail(
             func.count(case((UserProductReview.rating == 1, 1))).label("s1"),
         )
         .filter(UserProductReview.product_id == product_id)
+        .filter(_active_review_filter())
         .first()
     )
 
@@ -370,8 +406,8 @@ def product_detail(
         name=product.name,
         category=product.category,
         summary=product.summary,
-        average_rating=float(stats.avg_rating or 0.0),
-        review_count=int(stats.total or 0),
+        average_rating=float(product.cached_average_rating or 0.0),
+        review_count=int(product.cached_review_count or 0),
         star_distribution=distribution,
     )
 
@@ -383,14 +419,36 @@ def product_reviews(
     page_size: int = Query(default=20, ge=1, le=100),
     sort: str = Query(default="most_recent"),
     min_rating: int = Query(default=1, ge=1, le=5),
+    aspect: str | None = Query(default=None),
     _: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
     query = (
         db.query(UserProductReview)
         .options(selectinload(UserProductReview.user))
-        .filter(and_(UserProductReview.product_id == product_id, UserProductReview.rating >= min_rating))
+        .filter(and_(UserProductReview.product_id == product_id, UserProductReview.rating >= min_rating, _active_review_filter()))
     )
+    clean_aspect = (aspect or "").strip()
+    if clean_aspect:
+        parent = aliased(UserProductReview)
+        matching_review_ids = (
+            select(Prediction.review_id)
+            .where(
+                or_(
+                    Prediction.aspect_cluster == clean_aspect,
+                    Prediction.aspect_raw == clean_aspect,
+                )
+            )
+        )
+        query = (
+            query.outerjoin(parent, parent.id == UserProductReview.reply_to_review_id)
+            .filter(
+                or_(
+                    UserProductReview.linked_review_id.in_(matching_review_ids),
+                    parent.linked_review_id.in_(matching_review_ids),
+                )
+            )
+        )
 
     sort_key = sort.strip().lower()
     if sort_key == "highest_rated":
@@ -405,7 +463,16 @@ def product_reviews(
     rows = query.offset((page - 1) * page_size).limit(page_size).all()
     
     linked_review_ids = [row.linked_review_id for row in rows if row.linked_review_id]
-    parent_review_ids = [row.reply_to_review_id for row in rows if row.reply_to_review_id]
+    parent_user_review_ids = [row.reply_to_review_id for row in rows if row.reply_to_review_id]
+    parent_linked_review_by_id: dict[int, int] = {}
+    if parent_user_review_ids:
+        parent_rows = (
+            db.query(UserProductReview.id, UserProductReview.linked_review_id)
+            .filter(UserProductReview.id.in_(parent_user_review_ids), _active_review_filter())
+            .all()
+        )
+        parent_linked_review_by_id = {int(parent_id): int(linked_id) for parent_id, linked_id in parent_rows if linked_id}
+    parent_review_ids = list(parent_linked_review_by_id.values())
     predictions_by_review = {}
     if linked_review_ids or parent_review_ids:
         all_ids = [*linked_review_ids, *parent_review_ids]
@@ -423,7 +490,7 @@ def product_reviews(
     out: list[ProductReviewOut] = []
     for row in rows:
         aspects: list[AspectSummaryOut] = []
-        origin_review_id = row.reply_to_review_id or row.linked_review_id
+        origin_review_id = parent_linked_review_by_id.get(row.reply_to_review_id) if row.reply_to_review_id else row.linked_review_id
         if origin_review_id and origin_review_id in predictions_by_review:
             preds = predictions_by_review[origin_review_id][:6]
             seen = set()
@@ -434,7 +501,7 @@ def product_reviews(
                     aspects.append(AspectSummaryOut(aspect=aspect, sentiment=sentiment))
         reply_title = None
         if row.reply_to_review_id:
-            parent = db.query(UserProductReview.title).filter(UserProductReview.id == row.reply_to_review_id).first()
+            parent = db.query(UserProductReview.title).filter(UserProductReview.id == row.reply_to_review_id, _active_review_filter()).first()
             reply_title = parent[0] if parent else None
         out.append(_row_to_product_review_out(row, aspects, reply_title=reply_title))
     return out
@@ -456,7 +523,7 @@ def submit_review(
 
     parent_review = None
     if reply_to_review_id is not None:
-        parent_review = db.query(UserProductReview).filter(UserProductReview.id == int(reply_to_review_id)).first()
+        parent_review = db.query(UserProductReview).filter(UserProductReview.id == int(reply_to_review_id), _active_review_filter()).first()
         if not parent_review:
             raise HTTPException(status_code=404, detail="parent review not found")
         clean_product_id, clean_product_name = _lock_reply_context(clean_product_id, clean_product_name, parent_review)
@@ -475,15 +542,14 @@ def submit_review(
         product.name = clean_product_name
         product.updated_at = datetime.utcnow()
 
-    review = run_single_review_pipeline(
+    review, _, _, _ = run_single_review_hybrid_pipeline(
         db,
-        engine=request.app.state.seq2seq_engine,
+        explicit_engine=request.app.state.seq2seq_engine,
+        implicit_client=request.app.state.implicit_client,
         text=payload.review_text,
         domain=product.category,
         product_id=clean_product_id,
     )
-    db.flush()
-    
     user_review = UserProductReview(
         user_id=current.id,
         product_id=clean_product_id,
@@ -522,7 +588,7 @@ def my_reviews(
 ):
     rows = (
         db.query(UserProductReview)
-        .filter(UserProductReview.user_id == current.id)
+        .filter(UserProductReview.user_id == current.id, _active_review_filter())
         .order_by(desc(UserProductReview.created_at))
         .limit(200)
         .all()
@@ -560,6 +626,47 @@ def my_reviews(
     ]
 
 
+@router.get("/reviews/{review_id}", response_model=ProductReviewOut)
+def get_review(
+    review_id: int,
+    _: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    row = (
+        db.query(UserProductReview)
+        .options(selectinload(UserProductReview.user))
+        .filter(UserProductReview.id == review_id, _active_review_filter())
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="review not found")
+
+    origin_review_id = row.linked_review_id
+    if row.reply_to_review_id:
+        parent = (
+            db.query(UserProductReview.linked_review_id)
+            .filter(UserProductReview.id == row.reply_to_review_id, _active_review_filter())
+            .first()
+        )
+        origin_review_id = parent[0] if parent and parent[0] else row.linked_review_id
+    aspects: list[AspectSummaryOut] = []
+    if origin_review_id:
+        preds = (
+            db.query(Prediction.aspect_cluster, Prediction.sentiment)
+            .filter(Prediction.review_id == origin_review_id)
+            .order_by(desc(Prediction.confidence))
+            .limit(6)
+            .all()
+        )
+        aspects = [AspectSummaryOut(aspect=aspect, sentiment=sentiment) for aspect, sentiment in preds]
+
+    reply_title = None
+    if row.reply_to_review_id:
+        parent = db.query(UserProductReview.title).filter(UserProductReview.id == row.reply_to_review_id, _active_review_filter()).first()
+        reply_title = parent[0] if parent else None
+    return _row_to_product_review_out(row, aspects, reply_title=reply_title)
+
+
 @router.put("/reviews/{review_id}", response_model=SubmitReviewOut)
 def edit_review(
     review_id: int,
@@ -571,7 +678,7 @@ def edit_review(
 ):
     row = (
         db.query(UserProductReview)
-        .filter(and_(UserProductReview.id == review_id, UserProductReview.user_id == current.id))
+        .filter(and_(UserProductReview.id == review_id, UserProductReview.user_id == current.id, _active_review_filter()))
         .first()
     )
     if not row:
@@ -582,19 +689,16 @@ def edit_review(
         raise HTTPException(status_code=400, detail="reply_to_review_id cannot be changed")
 
     product = db.query(ProductCatalog).filter(ProductCatalog.product_id == row.product_id).first()
-    if product and product.cached_review_count > 0:
-        total_rating = (product.cached_average_rating * product.cached_review_count) - row.rating + payload.rating
-        product.cached_average_rating = total_rating / product.cached_review_count
-        product.updated_at = datetime.utcnow()
 
     clean_text = payload.review_text.strip()
 
     linked_review = None
     if row.linked_review_id:
         linked_review = db.query(Review).filter(Review.id == row.linked_review_id).first()
-    linked_review = run_single_review_pipeline(
+    linked_review, _, _, _ = run_single_review_hybrid_pipeline(
         db,
-        engine=request.app.state.seq2seq_engine,
+        explicit_engine=request.app.state.seq2seq_engine,
+        implicit_client=request.app.state.implicit_client,
         text=clean_text,
         domain=product.category if product else None,
         product_id=row.product_id,
@@ -603,12 +707,6 @@ def edit_review(
     )
 
     row.linked_review_id = linked_review.id
-    if product:
-        _apply_cached_product_delta(
-            product,
-            rating_delta=float(payload.rating) - float(row.rating),
-            latest_review_at=datetime.utcnow(),
-        )
     row.rating = payload.rating
     row.title = (payload.review_title or "").strip() or None
     row.review_text = clean_text
@@ -616,6 +714,8 @@ def edit_review(
     row.cons = (payload.cons or "").strip() or None
     row.recommendation = payload.recommendation
     row.updated_at = datetime.utcnow()
+    if product:
+        _recompute_product_cache(db, product)
     db.commit()
     background_tasks.add_task(_refresh_corpus_graph_task, linked_review.domain)
     return SubmitReviewOut(
@@ -634,7 +734,7 @@ def delete_review(
 ):
     row = (
         db.query(UserProductReview)
-        .filter(and_(UserProductReview.id == review_id, UserProductReview.user_id == current.id))
+        .filter(and_(UserProductReview.id == review_id, UserProductReview.user_id == current.id, _active_review_filter()))
         .first()
     )
     if not row:
@@ -649,12 +749,9 @@ def delete_review(
             helpful_delta=-int(row.helpful_count or 0),
         )
 
-    linked_id = row.linked_review_id
-    db.delete(row)
-    if linked_id:
-        linked_r = db.query(Review).filter(Review.id == linked_id).first()
-        if linked_r:
-            db.delete(linked_r)
+    row.deleted_at = datetime.utcnow()
+    row.updated_at = row.deleted_at
+    _recompute_product_cache_for_review(db, row)
 
     db.commit()
     return {"ok": True}

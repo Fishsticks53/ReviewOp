@@ -6,12 +6,6 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Callable, Dict, List, Tuple
 
-import spacy
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
-from spacy.language import Language
-from spacy.tokens import Doc, Span, Token
-
 from core.config import settings
 
 ARTICLE_PREFIX_RE = re.compile(r"^(the|a|an|this|that|these|those)\s+", flags=re.I)
@@ -154,6 +148,8 @@ def _valid_phrase(phrase: str) -> bool:
 @lru_cache(maxsize=1)
 def _nlp() -> Language:
     try:
+        import spacy
+
         return spacy.load("en_core_web_sm")
     except OSError as exc:
         raise RuntimeError(
@@ -171,6 +167,8 @@ def open_aspect_model_status() -> dict[str, str | bool]:
 
 @lru_cache(maxsize=1)
 def _embedder() -> SentenceTransformer:
+    from sentence_transformers import SentenceTransformer
+
     return SentenceTransformer(settings.open_aspect_model_name, local_files_only=True)
 
 
@@ -261,6 +259,8 @@ def _f1_score(precision: float, recall: float) -> float:
 def _dedup_by_embedding(phrases: List[str], scores: Dict[str, float], sim_thresh: float, max_keep: int) -> List[str]:
     if not phrases:
         return []
+
+    from sklearn.metrics.pairwise import cosine_similarity
 
     counts = Counter(phrases)
     unique_phrases = list(counts.keys())

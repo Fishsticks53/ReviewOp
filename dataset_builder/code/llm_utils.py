@@ -446,7 +446,7 @@ Extraction:"""
         GLOBAL_LLM_CACHE.set(cache_key, result)
         return [result]
     except Exception:
-        return [text]
+        return ["none"]
 
 
 async def discover_novel_aspects_async(

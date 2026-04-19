@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from report_context import ReportContext
+try:
+    from .report_context import ReportContext
+except ImportError:  # pragma: no cover
+    from report_context import ReportContext
 
 
 def assemble_pipeline_report(*, context: ReportContext) -> dict[str, Any]:

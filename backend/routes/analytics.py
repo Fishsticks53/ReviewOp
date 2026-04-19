@@ -46,6 +46,7 @@ from services.analytics import (
     user_reviews_list,
     user_reviews_summary,
 )
+from routes.user_portal import require_admin
 
 from services.kg_analytics import centrality_leaderboard, edges as kg_edges, communities as kg_communities
 
@@ -57,6 +58,7 @@ def analytics_overview(
     dt_from: str | None = Query(default=None, alias="from"),
     dt_to: str | None = Query(default=None, alias="to"),
     domain: str | None = None,
+    _: None = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     return overview(db, dt_from, dt_to, domain)
@@ -68,6 +70,7 @@ def analytics_top_aspects(
     dt_from: str | None = Query(default=None, alias="from"),
     dt_to: str | None = Query(default=None, alias="to"),
     domain: str | None = None,
+    _: None = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     return top_aspects(db, limit, dt_from, dt_to, domain)
@@ -79,6 +82,7 @@ def analytics_aspect_sentiment_distribution(
     dt_from: str | None = Query(default=None, alias="from"),
     dt_to: str | None = Query(default=None, alias="to"),
     domain: str | None = None,
+    _: None = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     return aspect_sentiment_distribution(db, limit, dt_from, dt_to, domain)
@@ -91,6 +95,7 @@ def analytics_trends(
     dt_from: str | None = Query(default=None, alias="from"),
     dt_to: str | None = Query(default=None, alias="to"),
     domain: str | None = None,
+    _: None = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     interval = interval.lower().strip()
@@ -104,6 +109,7 @@ def analytics_dashboard_kpis(
     dt_from: str | None = Query(default=None, alias="from"),
     dt_to: str | None = Query(default=None, alias="to"),
     domain: str | None = None,
+    _: None = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     return dashboard_kpis(db, dt_from, dt_to, domain)
@@ -113,6 +119,7 @@ def analytics_dashboard_kpis(
 def analytics_aspect_leaderboard(
     limit: int = 25,
     domain: str | None = None,
+    _: None = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     return aspect_leaderboard(db, limit=limit, domain=domain)
@@ -124,6 +131,7 @@ def analytics_evidence(
     sentiment: str | None = None,
     limit: int = 50,
     domain: str | None = None,
+    _: None = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     return evidence_drilldown(db, aspect=aspect, sentiment=sentiment, limit=limit, domain=domain)
@@ -134,6 +142,7 @@ def analytics_aspect_trends(
     interval: str = "day",
     domain: str | None = None,
     limit: int = 500,
+    _: None = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     interval = interval.lower().strip()
@@ -147,6 +156,7 @@ def analytics_emerging_aspects(
     interval: str = "day",
     lookback_buckets: int = 7,
     domain: str | None = None,
+    _: None = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     interval = interval.lower().strip()
@@ -160,18 +170,19 @@ def analytics_aspect_detail(
     aspect: str,
     interval: str = "day",
     domain: str | None = None,
+    _: None = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     return aspect_detail(db, aspect=aspect, interval=interval, domain=domain)
 
 
 @router.get("/alerts", response_model=list[AlertOut])
-def analytics_alerts(domain: str | None = None, db: Session = Depends(get_db)):
+def analytics_alerts(domain: str | None = None, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     return alerts(db, domain=domain)
 
 
 @router.delete("/alerts/{alert_id}")
-def analytics_clear_alert(alert_id: int, db: Session = Depends(get_db)):
+def analytics_clear_alert(alert_id: int, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     ok = clear_alert(db, alert_id)
     if not ok:
         raise HTTPException(status_code=404, detail="alert not found")
@@ -179,22 +190,22 @@ def analytics_clear_alert(alert_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/impact_matrix", response_model=list[ImpactMatrixRowOut])
-def analytics_impact_matrix(limit: int = 20, domain: str | None = None, db: Session = Depends(get_db)):
+def analytics_impact_matrix(limit: int = 20, domain: str | None = None, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     return impact_matrix(db, domain=domain, limit=limit)
 
 
 @router.get("/segments", response_model=list[SegmentDrilldownOut])
-def analytics_segments(limit: int = 20, domain: str | None = None, db: Session = Depends(get_db)):
+def analytics_segments(limit: int = 20, domain: str | None = None, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     return segment_drilldown(db, domain=domain, limit=limit)
 
 
 @router.get("/weekly_summary", response_model=WeeklySummaryOut)
-def analytics_weekly_summary(domain: str | None = None, db: Session = Depends(get_db)):
+def analytics_weekly_summary(domain: str | None = None, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     return weekly_summary(db, domain=domain)
 
 
 @router.get("/user_reviews/summary", response_model=UserReviewSummaryOut)
-def analytics_user_reviews_summary(domain: str | None = None, db: Session = Depends(get_db)):
+def analytics_user_reviews_summary(domain: str | None = None, _: None = Depends(require_admin), db: Session = Depends(get_db)):
     return user_reviews_summary(db, domain=domain)
 
 
@@ -207,6 +218,7 @@ def analytics_user_reviews_list(
     max_rating: int | None = None,
     limit: int = 50,
     offset: int = 0,
+    _: None = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     return user_reviews_list(
@@ -226,6 +238,7 @@ def analytics_export_json(
     domain: str | None = None,
     limit: int = 100,
     offset: int = 0,
+    _: None = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     return export_payload(db, domain=domain, limit=limit, offset=offset)
@@ -236,6 +249,7 @@ def analytics_export_pdf(
     domain: str | None = None,
     limit: int = 100,
     offset: int = 0,
+    _: None = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     pdf_bytes = export_pdf_bytes(db, domain=domain, limit=limit, offset=offset)
@@ -249,6 +263,7 @@ def analytics_export_pdf(
 def analytics_kg_centrality(
     limit: int = 20,
     domain: str | None = None,
+    _: None = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     return centrality_leaderboard(db, limit=limit, domain=domain)
@@ -259,6 +274,7 @@ def analytics_kg_edges(
     limit: int = 200,
     edge_type: str | None = None,  # similarity|cooccurrence
     domain: str | None = None,
+    _: None = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     return kg_edges(db, limit=limit, domain=domain, edge_type=edge_type)
@@ -269,6 +285,7 @@ def analytics_kg_communities(
     domain: str | None = None,
     edge_type: str = "cooccurrence",
     min_weight: float = 2.0,
+    _: None = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     return kg_communities(db, domain=domain, edge_type=edge_type, min_weight=min_weight)

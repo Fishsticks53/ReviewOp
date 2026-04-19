@@ -2,25 +2,27 @@
 from __future__ import annotations
 
 import io
+import logging
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Request
 from sqlalchemy.orm import Session
-import pandas as pd
-from pandas.errors import ParserError
 
 from core.db import get_db
 from models.schemas import JobCreateOut
 from models.tables import Job
-from services.seq2seq_infer import Seq2SeqEngine
-from services.batch_jobs import process_csv_sync
+from routes.user_portal import require_admin
 
 
 router = APIRouter(prefix="/infer", tags=["infer"])
 MAX_CSV_UPLOAD_BYTES = 5 * 1024 * 1024
 MAX_CSV_ROWS = 20_000
 ALLOWED_UPLOAD_TYPES = {"text/csv", "application/csv", "application/vnd.ms-excel", ""}
+logger = logging.getLogger(__name__)
 
 
-def _read_csv_best_effort(content: bytes, encoding: str) -> pd.DataFrame:
+def _read_csv_best_effort(content: bytes, encoding: str):
+    import pandas as pd
+    from pandas.errors import ParserError
+
     # Normal parser first (fast path).
     try:
         return pd.read_csv(io.BytesIO(content), encoding=encoding)
@@ -53,8 +55,11 @@ def _read_csv_best_effort(content: bytes, encoding: str) -> pd.DataFrame:
 async def infer_csv(
     request: Request,
     file: UploadFile = File(...),
+    _: None = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
+    from services.batch_jobs import schedule_csv_processing
+
     if file.content_type not in ALLOWED_UPLOAD_TYPES:
         raise HTTPException(status_code=415, detail="Only CSV uploads are supported")
     content = await file.read()
@@ -64,20 +69,20 @@ async def infer_csv(
         raise HTTPException(status_code=413, detail=f"CSV too large (max {MAX_CSV_UPLOAD_BYTES // (1024 * 1024)}MB)")
 
     df = None
-    decode_errors: list[str] = []
     for encoding in ("utf-8-sig", "cp1252", "latin1"):
         try:
             df = _read_csv_best_effort(content, encoding=encoding)
             break
-        except UnicodeDecodeError as ex:
-            decode_errors.append(f"{encoding}: {ex}")
-        except Exception as ex:
-            raise HTTPException(status_code=400, detail=f"CSV parse failed: {ex}")
+        except UnicodeDecodeError:
+            continue
+        except Exception as exc:
+            logger.warning("CSV parse failed (%s)", type(exc).__name__)
+            raise HTTPException(status_code=400, detail="CSV parse failed") from None
 
     if df is None:
         raise HTTPException(
             status_code=400,
-            detail=f"CSV parse failed: unable to decode file as utf-8-sig/cp1252/latin1 ({' | '.join(decode_errors)})",
+            detail="CSV parse failed: unable to decode file as utf-8-sig/cp1252/latin1",
         )
     if len(df.index) > MAX_CSV_ROWS:
         raise HTTPException(status_code=413, detail=f"CSV has too many rows (max {MAX_CSV_ROWS})")
@@ -86,8 +91,7 @@ async def infer_csv(
     db.add(job)
     db.commit()
 
-    engine: Seq2SeqEngine = request.app.state.seq2seq_engine
-
-    process_csv_sync(db=db, engine=engine, job=job, df=df)
+    engine = request.app.state.services.seq2seq_engine
+    schedule_csv_processing(engine=engine, job_id=job.id, df=df)
 
     return JobCreateOut(job_id=job.id, status=job.status, total=job.total)

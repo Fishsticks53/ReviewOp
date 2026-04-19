@@ -5,7 +5,10 @@ import re
 from dataclasses import dataclass
 from typing import Iterable
 
-from utils import normalize_whitespace, split_sentences, tokenize
+try:
+    from .utils import normalize_whitespace, split_sentences, tokenize
+except ImportError:  # pragma: no cover
+    from utils import normalize_whitespace, split_sentences, tokenize
 
 
 @dataclass
@@ -22,21 +25,41 @@ PRONOUN_RE = re.compile(r"\b(it|they|them|this|that|these|those|he|she|him|her|i
 ANTECEDENT_RE = re.compile(r"\b(?:the|a|an)?\s*([A-Za-z][A-Za-z0-9'/-]*(?:\s+[A-Za-z][A-Za-z0-9'/-]*){0,2})\b")
 STOP_ANTECEDENT_TOKENS = {
     "and", "or", "but", "so", "because", "with", "without", "very", "really", "too", "not",
-    "great", "good", "bad", "nice", "okay", "okay", "fine",
+    "great", "good", "bad", "nice", "okay", "fine", "all",
 }
+ANTECEDENT_BOUNDARY_TOKENS = {
+    "is", "are", "was", "were", "be", "been", "being", "feels", "felt", "seems",
+    "looks", "lasts", "charges", "works",
+}
+
+
+def _clean_antecedent_candidate(candidate: str) -> str | None:
+    tokens = tokenize(candidate)
+    if not tokens:
+        return None
+    if any(PRONOUN_RE.fullmatch(token) for token in tokens):
+        return None
+    while tokens and tokens[0] in {"the", "a", "an"}:
+        tokens = tokens[1:]
+    if tokens and tokens[0] in STOP_ANTECEDENT_TOKENS:
+        return None
+    for index, token in enumerate(tokens):
+        if token in ANTECEDENT_BOUNDARY_TOKENS:
+            tokens = tokens[:index]
+            break
+    if not tokens or all(token in STOP_ANTECEDENT_TOKENS for token in tokens):
+        return None
+    if any(token.isdigit() for token in tokens):
+        return None
+    return normalize_whitespace(" ".join(tokens))
 
 
 def _pick_antecedent(sentence: str, previous: str | None) -> str | None:
     matches = [match.group(1).strip() for match in ANTECEDENT_RE.finditer(sentence)]
     for candidate in reversed(matches):
-        tokens = tokenize(candidate)
-        if not tokens:
-            continue
-        if all(token in STOP_ANTECEDENT_TOKENS for token in tokens):
-            continue
-        if any(token.isdigit() for token in tokens):
-            continue
-        return normalize_whitespace(candidate)
+        cleaned = _clean_antecedent_candidate(candidate)
+        if cleaned:
+            return cleaned
     return previous
 
 
@@ -62,8 +85,9 @@ def heuristic_coref(text: str) -> CorefResult:
     rewritten: list[str] = []
     antecedent: str | None = None
     for sentence in sentences:
-        current_antecedent = _pick_antecedent(sentence, antecedent)
-        rewritten_sentence = _rewrite_sentence(sentence, current_antecedent, chains)
+        contains_pronoun = bool(PRONOUN_RE.search(sentence))
+        rewritten_sentence = _rewrite_sentence(sentence, antecedent, chains)
         rewritten.append(rewritten_sentence)
-        antecedent = current_antecedent or antecedent
+        if not contains_pronoun:
+            antecedent = _pick_antecedent(sentence, antecedent) or antecedent
     return CorefResult(text=" ".join(rewritten), chains=chains)

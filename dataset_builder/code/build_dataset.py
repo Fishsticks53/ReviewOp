@@ -1,258 +1,147 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
-import asyncio
 import json
 import os
-import random
-import re
 from pathlib import Path
+import re
 from typing import Any
 
 from dotenv import load_dotenv
 import pandas as pd
 from tqdm import tqdm
-from contracts import BuilderConfig
-from aspect_registry import (
-    ASPECT_REGISTRY_VERSION,
-    build_run_registry,
-    canonicalize_domain_aspect,
-    resolve_domain_canonical_aspect,
-    resolve_registry_version,
-    restaurant_ontology_compatible,
-    update_promoted_registry,
-)
-from coref import heuristic_coref
-from evaluation import aspect_metrics, benchmark_gold_eval, benchmark_structural_audits, gold_eval
-from exporters import write_pipeline_outputs
-from explicit_features import build_explicit_row, fit_explicit_artifacts
-from implicit_pipeline import (
-    _is_valid_latent_aspect,
-    _latent_aspect_label,
-    build_implicit_row,
-    collect_diagnostics,
-    discover_aspects,
-    MultiAspectSynthesis,
-    flush_llm_cache,
-)
-from io_utils import load_gold_annotations, load_inputs
-from language_utils import detect_language, is_implicit_ready, language_distribution
-from llm_utils import resolve_async_llm_provider
-from research_stack import build_research_manifest, resolve_benchmark, resolve_model_family
-from robustness_eval import evaluate_training_tracks, promotion_gate
-from schema_detect import detect_schema
-from pipeline_state import build_pipeline_state
-from report_context import build_report_context
-from report_payload import assemble_pipeline_report
-from splitter import grouped_leakage_report, grouped_split
-from synthetic_generation import generate_synthetic_multidomain
-from governance import governance_signoff
-from utils import (
-    normalize_whitespace,
-    read_jsonl,
-    stable_id,
-    utc_now_iso,
-    write_jsonl,
-    compress_dataset_artifacts,
-)
+try:
+    from .contracts import BuilderConfig
+    from .aspect_registry import (
+        ASPECT_REGISTRY_VERSION,
+        build_run_registry,
+        canonicalize_domain_aspect,
+        resolve_domain_canonical_aspect,
+        resolve_registry_version,
+        restaurant_ontology_compatible,
+        update_promoted_registry,
+    )
+    from .coref import heuristic_coref
+    from .evaluation import aspect_metrics, benchmark_gold_eval, benchmark_structural_audits, gold_eval
+    from .exporters import write_pipeline_outputs
+    from .explicit_features import build_explicit_row, fit_explicit_artifacts
+    from .implicit_pipeline import (
+        _is_valid_latent_aspect,
+        _latent_aspect_label,
+        build_implicit_row,
+        collect_diagnostics,
+        discover_aspects,
+        MultiAspectSynthesis,
+        flush_llm_cache,
+    )
+    from .io_utils import load_gold_annotations, load_inputs
+    from .language_utils import detect_language, is_implicit_ready, language_distribution
+    from .llm_utils import resolve_async_llm_provider
+    from .research_stack import build_research_manifest, resolve_benchmark, resolve_model_family
+    from .robustness_eval import evaluate_training_tracks, promotion_gate
+    from .schema_detect import detect_schema
+    from .pipeline_state import build_pipeline_state
+    from .report_context import build_report_context
+    from .report_payload import assemble_pipeline_report
+    from .splitter import grouped_leakage_report, grouped_split
+    from .synthetic_generation import generate_synthetic_multidomain
+    from .governance import governance_signoff
+    from .utils import (
+        normalize_whitespace,
+        read_jsonl,
+        stable_id,
+        utc_now_iso,
+        write_jsonl,
+        compress_dataset_artifacts,
+    )
+    from .runtime_options import load_runtime_defaults, optional_env, resolve_domain_conditioning_modes
+    from .pipeline_helpers import (
+        _CORE_BENCHMARK_DOMAINS,
+        _ProgressTracker,
+        assign_ids as _assign_ids,
+        benchmark_domain_family as _benchmark_domain_family,
+        benchmark_row_priority as _benchmark_row_priority,
+        canonical_domain as _canonical_domain,
+        chunk_rows as _chunk_rows,
+        get_row_domain as _get_row_domain,
+        harvest_dataset_aspects as _harvest_dataset_aspects,
+        select_working_rows as _select_working_rows,
+    )
+except ImportError:  # pragma: no cover
+    from contracts import BuilderConfig
+    from aspect_registry import (
+        ASPECT_REGISTRY_VERSION,
+        build_run_registry,
+        canonicalize_domain_aspect,
+        resolve_domain_canonical_aspect,
+        resolve_registry_version,
+        restaurant_ontology_compatible,
+        update_promoted_registry,
+    )
+    from coref import heuristic_coref
+    from evaluation import aspect_metrics, benchmark_gold_eval, benchmark_structural_audits, gold_eval
+    from exporters import write_pipeline_outputs
+    from explicit_features import build_explicit_row, fit_explicit_artifacts
+    from implicit_pipeline import (
+        _is_valid_latent_aspect,
+        _latent_aspect_label,
+        build_implicit_row,
+        collect_diagnostics,
+        discover_aspects,
+        MultiAspectSynthesis,
+        flush_llm_cache,
+    )
+    from io_utils import load_gold_annotations, load_inputs
+    from language_utils import detect_language, is_implicit_ready, language_distribution
+    from llm_utils import resolve_async_llm_provider
+    from research_stack import build_research_manifest, resolve_benchmark, resolve_model_family
+    from robustness_eval import evaluate_training_tracks, promotion_gate
+    from schema_detect import detect_schema
+    from pipeline_state import build_pipeline_state
+    from report_context import build_report_context
+    from report_payload import assemble_pipeline_report
+    from splitter import grouped_leakage_report, grouped_split
+    from synthetic_generation import generate_synthetic_multidomain
+    from governance import governance_signoff
+    from utils import (
+        normalize_whitespace,
+        read_jsonl,
+        stable_id,
+        utc_now_iso,
+        write_jsonl,
+        compress_dataset_artifacts,
+    )
+    from runtime_options import load_runtime_defaults, optional_env, resolve_domain_conditioning_modes
+    from pipeline_helpers import (
+        _CORE_BENCHMARK_DOMAINS,
+        _ProgressTracker,
+        assign_ids as _assign_ids,
+        benchmark_domain_family as _benchmark_domain_family,
+        benchmark_row_priority as _benchmark_row_priority,
+        canonical_domain as _canonical_domain,
+        chunk_rows as _chunk_rows,
+        get_row_domain as _get_row_domain,
+        harvest_dataset_aspects as _harvest_dataset_aspects,
+        select_working_rows as _select_working_rows,
+    )
 
 load_dotenv()
 
+_GROUP_SEMANTIC_NORMALIZE_RE = r"[^a-z0-9\s]+"
 _GROUP_ID_SOURCE_ROW: dict[str, str] = {}
 _GROUP_ID_SOURCE_COUNTS: Counter[str] = Counter()
-_GROUP_SEMANTIC_NORMALIZE_RE = r"[^a-z0-9\s]+"
 
 
 def _load_runtime_defaults() -> dict[str, Any]:
-    defaults_path = Path(__file__).resolve().parent / "runtime_defaults.json"
-    if not defaults_path.exists():
-        return {}
-    try:
-        payload = json.loads(defaults_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {}
-    defaults = payload.get("defaults")
-    return defaults if isinstance(defaults, dict) else {}
+    return load_runtime_defaults()
 
 
 def _optional_env(*names: str, default: str | None = None) -> str | None:
-    for name in names:
-        value = os.environ.get(name)
-        if value is not None and str(value).strip():
-            return str(value).strip()
-    return default
-
-
-class _ProgressTracker:
-    def __init__(self, *, enabled: bool, total_steps: int) -> None:
-        self._enabled = bool(enabled)
-        self._bar = tqdm(total=total_steps, desc="pipeline", unit="step", leave=False) if self._enabled else None
-
-    def step(self, label: str, n: int = 1) -> None:
-        if not self._bar:
-            return
-        self._bar.set_description(str(label))
-        self._bar.update(n)
-
-    def close(self) -> None:
-        if self._bar:
-            self._bar.close()
-
-
-def _assign_ids(frame: pd.DataFrame) -> pd.DataFrame:
-    out = frame.copy()
-    if "source_file" not in out.columns:
-        out["source_file"] = "unknown"
-
-    def get_row_id(row_tuple):
-        return stable_id(row_tuple.source_file, row_tuple.Index, str(row_tuple))
-
-    out["id"] = [get_row_id(row) for row in out.itertuples()]
-    return out
-
-
-def _harvest_dataset_aspects(frame: pd.DataFrame) -> list[tuple[str, set[str], set[str]]]:
-    """Extracts gold labels from all input data to bootstrap the Adaptive Lexicon."""
-    aspect_cols = [c for c in frame.columns if c.lower() in {"aspect", "gold_aspect", "target_aspect", "implicit_aspect"}]
-    if not aspect_cols:
-        return []
-    
-    discovered_labels = set()
-    for col in aspect_cols:
-        vals = frame[col].dropna().unique()
-        for v in vals:
-            if isinstance(v, str) and len(v.strip()) > 2:
-                discovered_labels.add(v.strip().lower())
-    
-    # Map them to rules: (label, explicit_kws, implicit_sigs)
-    # For harvesting, we treat the label itself as the explicit keyword.
-    new_rules = []
-    for label in discovered_labels:
-        new_rules.append((label, {label}, set()))
-    return new_rules
-
-
-def _get_row_domain(row: dict[str, Any]) -> str:
-    # V6 Research Spec: Prefer explicit 'domain' key over filename inference.
-    explicit_domain = row.get("domain")
-    source_file = row.get("source_file", "unknown")
-    if isinstance(explicit_domain, str) and explicit_domain and explicit_domain != "unknown":
-        return explicit_domain.strip().lower()
-    return _canonical_domain(str(source_file))
-
-
-def _canonical_domain(source_file: str | None) -> str:
-    name = Path(str(source_file or "unknown")).stem.lower()
-    for suffix in ("_train", "_test", "_val", "-train", "-test", "-val"):
-        if name.endswith(suffix):
-            name = name[: -len(suffix)]
-    domain_map = {
-        "product_reviews_mock_data": "product",
-        "fake reviews dataset": "general_product",
-    }
-    return domain_map.get(name, name)
-
-
-def _chunk_rows(rows: list[dict[str, Any]], cfg: BuilderConfig) -> list[dict[str, Any]]:
-    ordered = list(rows)
-    random.Random(cfg.random_seed).shuffle(ordered)
-    return ordered
-
-
-_CORE_BENCHMARK_DOMAINS = ("electronics", "restaurant", "telecom")
-
-
-def _benchmark_domain_family(domain: str | None) -> str:
-    normalized = str(domain or "unknown").strip().lower()
-    if normalized in {"laptop", "electronics"}:
-        return "electronics"
-    if normalized in {"restaurant", "telecom"}:
-        return normalized
-    return normalized or "unknown"
-
-
-def _benchmark_row_priority(row: dict[str, Any], *, preferred_domain: str | None = None) -> tuple[float, str]:
-    implicit = row.get("implicit", {}) or {}
-    aspects = [str(aspect) for aspect in implicit.get("aspects", []) if str(aspect) != "general"]
-    hardness = str(implicit.get("hardness_tier") or "").strip().upper()
-    review_reason = str(implicit.get("review_reason") or "").strip().lower()
-    sentiment = str(implicit.get("dominant_sentiment") or row.get("sentiment") or "").strip().lower()
-    domain_family = _benchmark_domain_family(str(_get_row_domain(row)))
-
-    score = 0.0
-    if bool(row.get("abstain_acceptable", False)):
-        score += 30.0
-    if bool(implicit.get("needs_review")):
-        score += 18.0
-    if review_reason in {"weak_support", "low_confidence"}:
-        score += 10.0
-    if hardness == "H3":
-        score += 20.0
-    elif hardness == "H2":
-        score += 14.0
-    if len(aspects) > 1:
-        score += 12.0
-    if sentiment == "negative":
-        score += 6.0
-    elif sentiment == "positive":
-        score += 2.0
-    if domain_family in _CORE_BENCHMARK_DOMAINS:
-        score += 4.0
-    if preferred_domain and domain_family == preferred_domain:
-        score += 6.0
-    stable = stable_id(
-        "benchmark-selection",
-        row.get("id") or row.get("source_text") or "",
-        row.get("domain") or "unknown",
-        row.get("split") or "train",
-    )
-    return (-score, stable)
-
-
-def _select_working_rows(rows: list[dict[str, Any]], cfg: BuilderConfig) -> list[dict[str, Any]]:
-    ordered = _chunk_rows(rows, cfg)
-    if cfg.sample_size is None and cfg.chunk_size is None:
-        return ordered
-
-    target_size = cfg.sample_size if cfg.sample_size is not None else (cfg.chunk_size if cfg.chunk_size is not None else len(ordered))
-    
-    from collections import defaultdict
-    by_domain: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for row in ordered:
-        by_domain[_benchmark_domain_family(str(_get_row_domain(row)))].append(row)
-        
-    sorted_domains = sorted(by_domain.keys())
-    quota_per_domain = max(1, target_size // max(1, len(sorted_domains)))
-
-    prioritized: list[dict[str, Any]] = []
-    selected_ids: set[str] = set()
-
-    for domain in sorted_domains:
-        domain_rows = sorted(
-            by_domain[domain],
-            key=lambda row: _benchmark_row_priority(row, preferred_domain=domain),
-        )
-        selected_for_domain = domain_rows[:quota_per_domain]
-        for row in selected_for_domain:
-            chosen_id = str(row.get("id") or "")
-            if chosen_id and chosen_id not in selected_ids:
-                prioritized.append(row)
-                selected_ids.add(chosen_id)
-
-    remaining = [row for row in ordered if str(row.get("id") or "") not in selected_ids]
-    remaining_sorted = sorted(remaining, key=lambda row: _benchmark_row_priority(row, preferred_domain=_benchmark_domain_family(str(_get_row_domain(row)))))
-    prioritized.extend(remaining_sorted)
-
-    if cfg.sample_size is not None:
-        prioritized = prioritized[: max(0, cfg.sample_size)]
-    if cfg.chunk_size is not None:
-        start = max(0, cfg.chunk_offset)
-        end = start + max(0, cfg.chunk_size)
-        prioritized = prioritized[start:end]
-    return prioritized
+    return optional_env(*names, default=default)
 
 
 def _train_floor_row_passes(
@@ -1757,7 +1646,10 @@ async def _salvage_train_rows(
             if use_coref:
                 coref_result = heuristic_coref(source_text)
                 coref_text = coref_result.text
-            from implicit_pipeline import build_implicit_row
+            try:
+                from .implicit_pipeline import build_implicit_row
+            except ImportError:  # pragma: no cover
+                from implicit_pipeline import build_implicit_row
             res = await build_implicit_row(
                 {
                     "id": row.get("id"),
@@ -1912,7 +1804,10 @@ async def _re_infer_recoverable_train_rows(
             if use_coref:
                 coref_result = heuristic_coref(source_text)
                 coref_text = coref_result.text
-            from implicit_pipeline import build_implicit_row
+            try:
+                from .implicit_pipeline import build_implicit_row
+            except ImportError:  # pragma: no cover
+                from implicit_pipeline import build_implicit_row
             res = await build_implicit_row(
                 {
                     "id": row.get("id"),
@@ -2268,14 +2163,13 @@ def _resolve_domain_conditioning_mode(cfg: BuilderConfig) -> str:
 
 
 def _resolve_split_domain_conditioning_modes(cfg: BuilderConfig) -> tuple[str, str]:
-    resolved_mode = _resolve_domain_conditioning_mode(cfg)
-    train_mode = str(getattr(cfg, "train_domain_conditioning_mode", "") or "").strip().lower()
-    eval_mode = str(getattr(cfg, "eval_domain_conditioning_mode", "") or "").strip().lower()
-    if train_mode not in {"adaptive_soft", "strict_hard", "off"}:
-        train_mode = "strict_hard" if resolved_mode != "off" else "off"
-    if eval_mode not in {"adaptive_soft", "strict_hard", "off"}:
-        eval_mode = "adaptive_soft" if resolved_mode != "off" else "off"
-    return train_mode, eval_mode
+    return resolve_domain_conditioning_modes(
+        domain_conditioning_mode=getattr(cfg, "domain_conditioning_mode", None),
+        use_domain_conditioning=bool(cfg.use_domain_conditioning),
+        strict_domain_conditioning=bool(cfg.strict_domain_conditioning),
+        train_domain_conditioning_mode=getattr(cfg, "train_domain_conditioning_mode", None),
+        eval_domain_conditioning_mode=getattr(cfg, "eval_domain_conditioning_mode", None),
+    )
 
 
 def _train_domain_leakage_metrics(
@@ -3523,7 +3417,10 @@ async def _process_row(
     )
 
     domain = _get_row_domain(row)
-    from implicit_pipeline import build_implicit_row
+    try:
+        from .implicit_pipeline import build_implicit_row
+    except ImportError:  # pragma: no cover
+        from implicit_pipeline import build_implicit_row
     implicit = await build_implicit_row(
         {**row, "split": split_name},
         text_column=text_column,
@@ -3643,9 +3540,15 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
     cfg.ensure_dirs()
     progress = _ProgressTracker(enabled=bool(getattr(cfg, "progress", True)), total_steps=10)
     
-    from llm_utils import flush_llm_cache, resolve_async_llm_provider, resolve_processor_async_provider
+    try:
+        from .llm_utils import flush_llm_cache, resolve_async_llm_provider, resolve_processor_async_provider
+    except ImportError:  # pragma: no cover
+        from llm_utils import flush_llm_cache, resolve_async_llm_provider, resolve_processor_async_provider
     if cfg.no_llm_cache:
-        from implicit_pipeline import flush_llm_cache as flush_implicit_cache
+        try:
+            from .implicit_pipeline import flush_llm_cache as flush_implicit_cache
+        except ImportError:  # pragma: no cover
+            from implicit_pipeline import flush_llm_cache as flush_implicit_cache
         flush_implicit_cache()
         flush_llm_cache()
 
@@ -3695,10 +3598,16 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
     
     harvested_rules = _harvest_dataset_aspects(frame)
     if harvested_rules:
-        from implicit_pipeline import inject_harvested_rules
+        try:
+            from .implicit_pipeline import inject_harvested_rules
+        except ImportError:  # pragma: no cover
+            from implicit_pipeline import inject_harvested_rules
         inject_harvested_rules(harvested_rules)
     
-    from aspect_registry import LearnedOntologyManager
+    try:
+        from .aspect_registry import LearnedOntologyManager
+    except ImportError:  # pragma: no cover
+        from aspect_registry import LearnedOntologyManager
     ontology_manager = LearnedOntologyManager.get_instance(cfg.state_dir)
     domains = frame["domain"].dropna().unique()
     promoted_discovered = []
@@ -3707,7 +3616,10 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
         for p in promoted:
             promoted_discovered.append((p, {p}, set()))
     if promoted_discovered:
-        from implicit_pipeline import inject_harvested_rules
+        try:
+            from .implicit_pipeline import inject_harvested_rules
+        except ImportError:  # pragma: no cover
+            from implicit_pipeline import inject_harvested_rules
         inject_harvested_rules(promoted_discovered)
 
     progress.step("input load/schema detect")
@@ -3811,7 +3723,7 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
                     results[idx] = res
                 except Exception as e:
                     print(f"\n[!] Error processing row {idx} in {split_name}: {str(e)}")
-                    results[idx] = row
+                    results[idx] = None
                 finally:
                     pbar.update(1)
 
@@ -3849,7 +3761,10 @@ async def run_pipeline(cfg: BuilderConfig) -> dict[str, Any]:
                         stability_threshold=cfg.discovery_stability_threshold
                     )
         
-        from implicit_pipeline import VectorAspectMatcher
+        try:
+            from .implicit_pipeline import VectorAspectMatcher
+        except ImportError:  # pragma: no cover
+            from implicit_pipeline import VectorAspectMatcher
         matcher = VectorAspectMatcher.get_instance()
         def sim_func(a, b):
             emb_a = matcher.model.encode([a])[0]
@@ -4496,7 +4411,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--artifact-mode", type=str, default="auto", choices=["auto", "debug_artifacts", "research_release"])
     parser.add_argument("--debug-benchmark-max-rows", type=int, default=180)
     parser.add_argument("--processor", type=str, default=_optional_env("DATASET_BUILDER_PROCESSOR"), choices=["local", "runpod"])
-    parser.add_argument("--llm-provider", type=str, default="auto", choices=["auto", "openai", "runpod", "ollama", "mock", "claude", "anthropic"])
+    parser.add_argument(
+        "--llm-provider",
+        "--llm-option",
+        dest="llm_provider",
+        type=str,
+        default="auto",
+        choices=["auto", "openai", "runpod", "ollama", "mock", "claude", "anthropic"],
+        help="LLM provider for fallback/reasoned recovery. --llm-option is a backward-compatible alias.",
+    )
     parser.add_argument(
         "--llm-model-name",
         type=str,
