@@ -22,6 +22,7 @@ class BenchmarkRow:
     hardness_tier: str = "H0"
     provenance: dict[str, Any] = field(default_factory=dict)
     score_components: dict[str, float] = field(default_factory=dict)
+    split_protocol: dict[str, str] = field(default_factory=lambda: {"random": "unused", "grouped": "unused", "domain_holdout": "unused"})
 
     def __post_init__(self) -> None:
         if not str(self.group_id).strip():

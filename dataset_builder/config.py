@@ -8,7 +8,7 @@ from typing import Any, Optional
 
 DEFAULT_INPUT_DIR = Path("dataset_builder/input")
 DEFAULT_OUTPUT_DIR = Path("dataset_builder/output")
-SUPPORTED_LLM_PROVIDERS = {"none", "openai", "groq"}
+SUPPORTED_LLM_PROVIDERS = {"none", "openai", "groq", "claude", "anthropic", "openrouter", "huggingface", "ollama", "lightning", "gemini"}
 
 def get_default_llm_model() -> str:
     return os.environ.get("LLM_MODEL", "gpt-5-nano")
@@ -22,14 +22,31 @@ def get_env_model(provider: str, current_model: str | None = None) -> str:
     fallback = current_model if current_model and current_model != "gpt-5-nano" else get_default_llm_model()
     
     if provider == "openai":
-        return os.environ.get("OPENAI_MODEL", fallback)
+        val = os.environ.get("OPENAI_MODEL")
+        return val.strip() if val else fallback
     elif provider == "groq":
-        return os.environ.get("GROQ_MODEL", fallback)
-    elif provider == "claude":
-        return os.environ.get("CLAUDE_MODEL", fallback)
+        val = os.environ.get("GROQ_MODEL")
+        return val.strip() if val else fallback
+    elif provider in ("claude", "anthropic"):
+        val = os.environ.get("CLAUDE_MODEL") or os.environ.get("ANTHROPIC_MODEL")
+        return val.strip() if val else "claude-sonnet-4-6"
+    elif provider == "gemini":
+        val = os.environ.get("GEMINI_MODEL")
+        return val.strip() if val else "gemini-3.1-flash-lite-preview"
+    elif provider == "openrouter":
+        val = os.environ.get("OPENROUTER_MODEL")
+        return val.strip() if val else "openrouter/free"
+    elif provider == "huggingface":
+        val = os.environ.get("HUGGINGFACE_MODEL")
+        return val.strip() if val else "mistralai/Mistral-7B-Instruct-v0.3"
     elif provider == "ollama":
-        return os.environ.get("OLLAMA_MODEL", fallback)
-    return os.environ.get("LLM_MODEL", fallback)
+        val = os.environ.get("OLLAMA_MODEL")
+        return val.strip() if val else fallback
+    elif provider == "lightning":
+        val = os.environ.get("LIGHTNING_MODEL")
+        return val.strip() if val else "lightning-ai/gpt-oss-20b"
+    val = os.environ.get("LLM_MODEL")
+    return val.strip() if val else fallback
 
 
 @dataclass(frozen=True)
@@ -50,7 +67,14 @@ class BuilderConfig:
     dry_run: bool = False
     overwrite: bool = False
     use_cache: bool = True
+    strict: bool = False
     symptom_store_path: Optional[str] = None
+    domain_mode: str = "full"
+    provisional_policy: str = "strict"
+    evidence_window_tokens: int = 8
+    aspect_memory_auto_promote: bool = False
+    aspect_memory_path: Optional[str] = None
+    max_workers: int = 20
 
 
 def load_config(path: str | Path | None = None) -> BuilderConfig:
@@ -60,8 +84,8 @@ def load_config(path: str | Path | None = None) -> BuilderConfig:
         payload = json.loads(Path(path).read_text(encoding="utf-8"))
     
     # Prioritize: 1. JSON config file, 2. Env vars, 3. Defaults
-    llm_provider = str(payload.get("llm_provider", get_default_llm_provider()))
-    llm_model = str(payload.get("llm_model", get_env_model(llm_provider)))
+    llm_provider = str(payload.get("llm_provider", get_default_llm_provider())).strip()
+    llm_model = str(payload.get("llm_model", get_env_model(llm_provider))).strip()
 
     return BuilderConfig(
         input_dir=Path(payload.get("input_dir", DEFAULT_INPUT_DIR)),
@@ -80,7 +104,14 @@ def load_config(path: str | Path | None = None) -> BuilderConfig:
         dry_run=bool(payload.get("dry_run", False)),
         overwrite=bool(payload.get("overwrite", False)),
         use_cache=bool(payload.get("use_cache", True)),
+        strict=bool(payload.get("strict", False)),
         symptom_store_path=payload.get("symptom_store_path"),
+        domain_mode=str(payload.get("domain_mode", "full")),
+        provisional_policy=str(payload.get("provisional_policy", "strict")),
+        evidence_window_tokens=int(payload.get("evidence_window_tokens", 8)),
+        aspect_memory_auto_promote=bool(payload.get("aspect_memory_auto_promote", False)),
+        aspect_memory_path=payload.get("aspect_memory_path"),
+        max_workers=int(payload.get("max_workers", 20)),
     )
 
 
@@ -98,6 +129,10 @@ def validate_config(cfg: BuilderConfig) -> None:
         raise ValueError("chunk_size must be >= 0")
     if cfg.chunk_offset < 0:
         raise ValueError("chunk_offset must be >= 0")
+    if cfg.domain_mode not in {"generic_only", "generic_plus_domain", "generic_plus_learned", "full"}:
+        raise ValueError(f"unsupported domain_mode: {cfg.domain_mode}")
+    if cfg.provisional_policy not in {"loose", "strict", "memory_only"}:
+        raise ValueError(f"unsupported provisional_policy: {cfg.provisional_policy}")
 
 
 def to_jsonable(cfg: BuilderConfig) -> dict[str, Any]:
@@ -118,5 +153,12 @@ def to_jsonable(cfg: BuilderConfig) -> dict[str, Any]:
         "dry_run": cfg.dry_run,
         "overwrite": cfg.overwrite,
         "use_cache": cfg.use_cache,
+        "strict": cfg.strict,
         "symptom_store_path": cfg.symptom_store_path,
+        "domain_mode": cfg.domain_mode,
+        "provisional_policy": cfg.provisional_policy,
+        "evidence_window_tokens": cfg.evidence_window_tokens,
+        "aspect_memory_auto_promote": cfg.aspect_memory_auto_promote,
+        "aspect_memory_path": cfg.aspect_memory_path,
+        "max_workers": cfg.max_workers,
     }

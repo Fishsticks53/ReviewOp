@@ -160,6 +160,7 @@ def _episode_row_from_example(row: Dict[str, Any], role: str, cfg: ProtonetConfi
         "label_type": row.get("label_type", "explicit"),
         "support_type": row.get("support_type", "unknown"),
         "mapping_source": row.get("mapping_source", "unknown"),
+        "source_type": str(row.get("source_type") or "unknown"),
         "quality_flags": list(row.get("quality_flags") or []),
         "confidence": float(row.get("confidence", 1.0)),
         "hardness_tier": str(row.get("hardness_tier") or "H0").upper(),
@@ -321,7 +322,8 @@ def _weighted_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         hard = _hardness_score(row)
         multi = 1.0 if len(list(row.get("gold_joint_labels") or [])) >= 2 else 0.0
         boundary = 1.0 if bool(row.get("abstain_acceptable", False)) else 0.0
-        score = 0.35 * grounded + 0.30 * hard + 0.20 * multi + 0.15 * boundary
+        is_explicit = 1.0 if str(row.get('source_type') or 'unknown') == 'explicit' else 0.0
+        score = 0.30 * grounded + 0.25 * is_explicit + 0.20 * hard + 0.15 * multi + 0.10 * boundary
         ident = str(row.get("example_id") or row.get("parent_review_id") or "")
         return (-score, ident)
     return sorted(rows, key=row_score)

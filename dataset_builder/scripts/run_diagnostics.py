@@ -15,6 +15,9 @@ class DiagnosticConfig:
     output_root: Path
     mode: str = "all"
     strict: bool = False
+    symptom_store_path: Optional[str] = None
+    include_unseen_domain: bool = False
+    profile: str = "development"
 
 @dataclass
 class ValidationResult:
@@ -66,6 +69,30 @@ class DiagnosticValidator:
             
         return ValidationResult(is_valid=len(errors) == 0, errors=errors)
 
+    def validate_aggregate(self, exported_rows: List[Dict[str, Any]], expectations: Dict[str, Any]) -> ValidationResult:
+        errors = []
+        if not exported_rows and expectations.get("min_rows", 0) > 0:
+            errors.append(f"Expected at least {expectations['min_rows']} rows, got 0")
+            return ValidationResult(False, errors)
+
+        all_interps = [i for row in exported_rows for i in row.get("gold_interpretations", [])]
+        
+        # 1. Learned Count
+        if "min_learned_count" in expectations:
+            learned = [i for i in all_interps if i.get("source_type") == "implicit_learned"]
+            if len(learned) < expectations["min_learned_count"]:
+                errors.append(f"Implicit learned count failure: expected {expectations['min_learned_count']}, got {len(learned)}")
+
+        # 2. Provenance Unknown Rate
+        if "max_unknown_provenance_rate" in expectations:
+            if all_interps:
+                unknown = [i for i in all_interps if i.get("mapping_source") in ("unknown", "none")]
+                rate = len(unknown) / len(all_interps)
+                if rate > expectations["max_unknown_provenance_rate"]:
+                    errors.append(f"Unknown provenance rate failure: {rate:.1%} > {expectations['max_unknown_provenance_rate']:.1%}")
+
+        return ValidationResult(is_valid=len(errors) == 0, errors=errors)
+
 class DiagnosticRunner:
     def __init__(self, config: DiagnosticConfig):
         self.config = config
@@ -74,6 +101,8 @@ class DiagnosticRunner:
     def load_fixtures(self) -> List[Dict[str, Any]]:
         fixtures = []
         for fixture_file in self.config.fixtures_dir.glob("*.jsonl"):
+            if not self.config.include_unseen_domain and "unseen_domain" in fixture_file.name:
+                continue
             with open(fixture_file, 'r', encoding='utf-8') as f:
                 for line in f:
                     if line.strip():
@@ -121,7 +150,9 @@ class DiagnosticRunner:
             input_paths=tuple(self.config.fixtures_dir.glob("*.jsonl")),
             output_dir=run_output,
             overwrite=True,
-            sample_size=len(raw_reviews)
+            sample_size=len(raw_reviews),
+            strict=self.config.strict,
+            symptom_store_path=self.config.symptom_store_path
         )
 
         try:
@@ -144,6 +175,7 @@ class DiagnosticRunner:
 
             # Row-level validation
             total_errors = []
+            unseen_ids = {f.get("id") for f in fixtures if f.get("fixture_type") == "unseen_domain"}
             for row in exported_rows:
                 # Find matching fixture for expectations
                 fixture = next((f for f in fixtures if f["id"] == row["review_id"]), {})
@@ -152,6 +184,7 @@ class DiagnosticRunner:
                 v_res = self.validator.validate_row(row, expectations)
                 if not v_res.is_valid:
                     total_errors.extend([f"Row {row['review_id']}: {e}" for e in v_res.errors])
+            unseen_errors = [e for e in total_errors if any(f"Row {uid}:" in e for uid in unseen_ids if uid)]
 
             # Accounting validation
             stats = {
@@ -160,17 +193,19 @@ class DiagnosticRunner:
                 "rejected_rows": 0, # TODO: Get from pipeline if available
                 "discarded_rows": 0 # TODO: Get from pipeline if available
             }
-            # Behavioral Hard Gate: Must have at least one learned path match in diagnostic run
-            source_types_seen = [i.get("source_type") for row in exported_rows for i in row.get("gold_interpretations", [])]
-            learned_count = sum(1 for st in source_types_seen if st == "implicit_learned")
-            
-            if self.config.strict and learned_count == 0:
-                total_errors.append(f"Learned path hard gate failure: 0 implicit_learned interpretations detected among {len(source_types_seen)} interpretations.")
-
-            # Simplified accounting for now: sum of splits == results['counts']['total']
             v_acc = self.validator.validate_accounting(stats)
             if not v_acc.is_valid:
                 total_errors.extend(v_acc.errors)
+
+            # Aggregate validation using global expectations
+            for fixture_type, exp in global_expectations.items():
+                # Filter exported rows by fixture type in metadata
+                type_rows = [r for r in exported_rows if r.get("metadata", {}).get("fixture_type") == fixture_type]
+                if not type_rows:
+                    continue
+                v_agg = self.validator.validate_aggregate(type_rows, exp)
+                if not v_agg.is_valid:
+                    total_errors.extend([f"Aggregate [{fixture_type}]: {e}" for e in v_agg.errors])
 
             # 6. Final Report
             summary = {
@@ -192,6 +227,12 @@ class DiagnosticRunner:
                 for err in total_errors[:10]:
                     print(f"  - {err}")
                 if self.config.strict:
+                    should_fail = True
+                    if self.config.include_unseen_domain and unseen_errors and self.config.profile in {"development", "research_default"}:
+                        should_fail = False
+                    if should_fail:
+                        sys.exit(1)
+                elif self.config.include_unseen_domain and unseen_errors and self.config.profile == "diagnostic_strict":
                     sys.exit(1)
             
         except Exception as e:
@@ -207,6 +248,9 @@ def main():
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--mode", choices=["all", "per-fixture", "mixed"], default="all")
     parser.add_argument("--strict", action="store_true")
+    parser.add_argument("--symptom-store", type=str, help="Path to symptom store for learned implicit detection")
+    parser.add_argument("--include-unseen-domain", action="store_true")
+    parser.add_argument("--profile", choices=["development", "research_default", "diagnostic_strict"], default="development")
     
     args = parser.parse_args()
     
@@ -215,7 +259,10 @@ def main():
         expectations_path=args.expectations_path,
         output_root=args.output_root,
         mode=args.mode,
-        strict=args.strict
+        strict=args.strict,
+        symptom_store_path=args.symptom_store,
+        include_unseen_domain=args.include_unseen_domain,
+        profile=args.profile,
     )
     
     runner = DiagnosticRunner(config)

@@ -7,12 +7,14 @@ explicit_easy:
 
 implicit_learned:
   min_rows: 4
+  min_learned_count: 2
   required_source_types:
     - implicit_learned
   require_matched_pattern: true
   require_pattern_id: true
   evidence_exact_match_rate: 1.0
   max_unknown_canonical_rate: 0.0
+  max_unknown_provenance_rate: 0.0
 
 implicit_json_fallback:
   min_rows: 3

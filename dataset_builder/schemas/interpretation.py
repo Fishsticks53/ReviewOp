@@ -5,7 +5,7 @@ from typing import Optional, Any
 
 
 VALID_LABEL_TYPES = {"explicit", "implicit"}
-VALID_SOURCE_TYPES = {"explicit", "implicit_learned", "implicit_json", "implicit_llm", "merged"}
+VALID_SOURCE_TYPES = {"explicit", "implicit_learned", "implicit_json", "implicit_llm", "merged", "unknown"}
 
 
 @dataclass(frozen=True)
@@ -35,6 +35,11 @@ class Interpretation:
     aspect_anchor: Optional[str] = None
     modifier_terms: tuple[str, ...] = field(default_factory=tuple)
     anchor_source: Optional[str] = None
+    mapping_layers: tuple[str, ...] = field(default_factory=tuple)
+    matched_terms: tuple[str, ...] = field(default_factory=tuple)
+    implicit_trigger: Optional[str] = None
+    mapping_scope: str = "unknown"
+    conflict_resolution: str = "none"
 
     def __post_init__(self) -> None:
         if self.aspect_anchor and not self.anchor_source:

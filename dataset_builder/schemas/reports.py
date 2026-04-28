@@ -14,10 +14,14 @@ class QualityReport:
     rejected_rows: int = 0
     discarded_rows: int = 0
     mapping_source_distribution: dict[str, int] = field(default_factory=dict)
+    mapping_scope_distribution: dict[str, int] = field(default_factory=dict)
+    mapping_layer_distribution: dict[str, int] = field(default_factory=dict)
     original_sample_size: int = 0
     total_discarded: int = 0
     rejected_interpretations: int = 0
     reason_counts: dict[str, int] = field(default_factory=dict)
+    row_rejection_reason_counts: dict[str, int] = field(default_factory=dict)
+    dropped_interpretation_reason_counts: dict[str, int] = field(default_factory=dict)
     source_type_distribution: dict[str, int] = field(default_factory=dict)
     label_type_distribution: dict[str, int] = field(default_factory=dict)
     novelty_distribution: dict[str, int] = field(default_factory=dict)

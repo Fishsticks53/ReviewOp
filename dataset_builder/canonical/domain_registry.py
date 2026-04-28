@@ -1,12 +1,30 @@
 from __future__ import annotations
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 DEFAULT_DOMAIN_CONFIG_DIR = Path("dataset_builder/config/domains")
 
+@dataclass(frozen=True)
+class DomainConfig:
+    domain: str
+    generic: dict[str, Any]
+    domain_raw: dict[str, Any]
+    merged: dict[str, Any]
+
+    def generic_map(self) -> dict[str, str]:
+        return self.generic.get("domain_maps", {})
+
+    def domain_map(self) -> dict[str, str]:
+        return self.domain_raw.get("domain_maps", {})
+
+    def merged_map(self) -> dict[str, str]:
+        return self.merged.get("domain_maps", {})
+
 class DomainRegistry:
     _cache: dict[str, dict[str, Any]] = {}
+    _source_cache: dict[str, DomainConfig] = {}
     
     @classmethod
     def get_config(cls, domain: str | None, config_dir: Path = DEFAULT_DOMAIN_CONFIG_DIR) -> dict[str, Any]:
@@ -67,3 +85,30 @@ class DomainRegistry:
     @classmethod
     def get_domain_map(cls, domain: str | None) -> dict[str, str]:
         return cls.get_config(domain).get("domain_maps", {})
+
+    @classmethod
+    def get_source_config(cls, domain: str | None, config_dir: Path = DEFAULT_DOMAIN_CONFIG_DIR) -> DomainConfig:
+        domain = str(domain or "generic").lower()
+        if domain in cls._source_cache:
+            return cls._source_cache[domain]
+
+        generic_path = config_dir / "generic.json"
+        if not generic_path.exists():
+            raise FileNotFoundError(f"Mandatory generic.json missing in {config_dir}")
+        generic = json.loads(generic_path.read_text(encoding="utf-8"))
+        cls._validate_schema(generic, "generic")
+
+        domain_raw: dict[str, Any] = {}
+        if domain != "generic":
+            domain_path = config_dir / f"{domain}.json"
+            if domain_path.exists():
+                domain_raw = json.loads(domain_path.read_text(encoding="utf-8"))
+                cls._validate_schema(domain_raw, domain)
+
+        merged = json.loads(json.dumps(generic))
+        if domain_raw:
+            cls._deep_merge(merged, domain_raw)
+
+        out = DomainConfig(domain=domain, generic=generic, domain_raw=domain_raw, merged=merged)
+        cls._source_cache[domain] = out
+        return out

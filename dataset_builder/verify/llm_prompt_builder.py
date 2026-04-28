@@ -1,18 +1,15 @@
 from __future__ import annotations
 from typing import Any
 
-def build_verifier_prompt(review_text: str, candidates: list[dict[str, Any]]) -> str:
+def build_verifier_prompt(review_text: str, candidates: list[dict[str, Any]]) -> tuple[str, str]:
     """Build a detailed prompt for aspect-level verification."""
     candidate_list = ""
     for i, c in enumerate(candidates):
         candidate_list += f"Index {i}: {c['aspect_raw']} | {c['sentiment']} | Evidence: '{c['evidence_text']}'\n"
         
-    return (
+    system = (
         "You are an expert data auditor for Aspect-Based Sentiment Analysis (ABSA).\n"
         "Your task is to verify a list of candidate interpretations extracted from a review.\n\n"
-        f"Review: {review_text}\n\n"
-        "Candidates:\n"
-        f"{candidate_list}\n"
         "Instructions:\n"
         "For each candidate, decide on one of the following actions:\n"
         "- 'keep': The aspect and sentiment are correctly grounded in the evidence.\n"
@@ -25,3 +22,11 @@ def build_verifier_prompt(review_text: str, candidates: list[dict[str, Any]]) ->
         "Do not include any conversational filler; return ONLY the raw JSON list.\n"
         "Example: [{\"index\": 0, \"action\": \"keep\", \"reason\": \"correctly identifies aspect and sentiment\"}, {\"index\": 1, \"action\": \"drop\", \"reason\": \"noisy aspect\"}]"
     )
+    
+    user = (
+        f"Review: {review_text}\n\n"
+        "Candidates:\n"
+        f"{candidate_list}"
+    )
+    
+    return system, user

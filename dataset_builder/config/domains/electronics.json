@@ -1,23 +1,31 @@
 {
-    "broad_labels": ["good", "bad", "quality", "works"],
+    "broad_labels": ["good", "bad", "quality", "works", "battery_life", "display", "portability", "performance", "build_quality", "phone", "product", "laptop", "device", "eyes", "minutes", "seconds", "hours", "days", "weeks", "months", "years"],
     "latent_families": {
         "power": ["battery", "charging", "charger", "power", "plug", "cord", "week", "days"],
         "display": ["screen", "display", "brightness", "color", "pixels", "dim"],
-        "performance": ["slow", "lag", "fast", "crash", "performance", "speed", "stutter"]
+        "performance": ["slow", "lag", "fast", "crash", "performance", "speed", "stutter"],
+        "portability": ["light", "portable", "weight", "heavy", "small", "compact", "carry"],
+        "build_quality": ["fragile", "solid", "build", "feel", "sturdy", "durable", "tough", "cheap"]
     },
     "domain_maps": {
         "battery": "battery_life",
+        "battery life": "battery_life",
         "charge": "battery_life",
         "power": "battery_life",
         "week": "battery_life",
         "screen": "display",
+        "screen size": "display",
         "monitor": "display",
         "light": "portability",
         "weight": "portability",
         "speed": "performance",
         "fast": "performance",
         "phone": "phone",
-        "build": "build_quality"
+        "build": "build_quality",
+        "build quality": "build_quality",
+        "feel": "build_quality",
+        "portable": "portability",
+        "compact": "portability"
     },
     "modifier_maps": {
         "phone": {

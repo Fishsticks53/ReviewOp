@@ -1,12 +1,28 @@
 {
-    "broad_labels": ["good", "bad", "quality", "works", "thing", "use", "item", "product"],
+    "broad_labels": ["quality", "performance", "price", "service", "usability", "design", "value"],
     "latent_families": {
-        "performance": ["slow", "fast", "works", "broken", "lag", "speed", "reliable"],
-        "usability": ["easy", "hard", "simple", "complex", "intuitive", "user"],
-        "value": ["price", "cost", "cheap", "expensive", "value", "worth", "money"],
-        "aesthetics": ["look", "feel", "design", "style", "beautiful", "ugly"],
-        "quality": ["durable", "sturdy", "flimsy", "cheaply", "well-made", "premium"],
+        "performance": ["slow", "fast", "speed", "reliable", "lag", "efficient"],
+        "usability": ["easy", "hard", "simple", "complex", "intuitive"],
+        "value": ["price", "cost", "worth", "money", "expensive", "cheap"],
+        "aesthetics": ["look", "feel", "design", "style", "beautiful"],
+        "quality": ["durable", "sturdy", "flimsy", "well-made", "premium"],
         "service": ["support", "help", "contact", "response", "staff"]
     },
-    "domain_maps": {}
+    "domain_maps": {
+        "price": "price",
+        "cost": "price",
+        "value": "value",
+        "service": "service",
+        "support": "customer_support",
+        "quality": "quality",
+        "delivery": "delivery",
+        "shipping": "delivery",
+        "performance": "performance",
+        "usability": "usability",
+        "design": "design",
+        "comfort": "comfort",
+        "cleanliness": "cleanliness",
+        "availability": "availability"
+    },
+    "modifier_maps": {}
 }

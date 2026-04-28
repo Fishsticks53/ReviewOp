@@ -9,7 +9,7 @@ from ..llm.provider_factory import get_llm_client
 from .llm_prompt_builder import build_verifier_prompt
 from .llm_response_parser import parse_keep_drop_merge_add, validate_verifier_json
 
-class OpenAIVerifier:
+class LLMVerifier:
     def __init__(self, cfg: Any) -> None:
         self.cfg = cfg
         self.client = get_llm_client(cfg)
@@ -20,10 +20,10 @@ class OpenAIVerifier:
             return []
             
         candidates = [asdict(i) for i in interpretations]
-        prompt = build_verifier_prompt(review_text, candidates)
+        system_prompt, user_prompt = build_verifier_prompt(review_text, candidates)
         
         try:
-            response_text = self.client.generate(prompt, max_tokens=2048).strip()
+            response_text = self.client.generate(user_prompt, system_prompt=system_prompt, max_tokens=2048).strip()
             # Find the JSON block in the response (robustly)
             start = response_text.find("[")
             end = response_text.rfind("]") + 1

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 from ..reports.quality_report import build_quality_report
 from ..split.leakage_checks import check_cross_split_leakage
+from .exceptions import QualityGateError
 
 def run_release_gate(output_dir: Path, cfg: Any) -> tuple[bool, dict[str, Any]]:
     """Generate reports and verify the artifact is ready for release."""
@@ -60,25 +61,62 @@ def assert_release_ready(
     
     # Critical Invariants (Fail regardless of profile)
     if int(leakage.get("grouped_leakage", 0)) != 0:
-        raise ValueError("Critical Failure: grouped split leakage detected")
+        gate_results = {
+            "status": "FATAL",
+            "profile": profile,
+            "failures": ["Critical Failure: grouped split leakage detected"],
+            "warnings": [],
+            "metrics": {}
+        }
+        raise QualityGateError(gate_results, "Critical Failure: grouped split leakage detected")
     if int(leakage.get("exact_text_leakage", 0)) != 0:
-        raise ValueError("Critical Failure: exact text leakage detected")
+        gate_results = {
+            "status": "FATAL",
+            "profile": profile,
+            "failures": ["Critical Failure: exact text leakage detected"],
+            "warnings": [],
+            "metrics": {}
+        }
+        raise QualityGateError(gate_results, "Critical Failure: exact text leakage detected")
         
     quality = reports.get("quality", {})
     q_data = quality.__dict__ if hasattr(quality, "__dict__") else quality
     
     if not q_data.get("accounting_valid", True):
-        raise ValueError("Critical Failure: export accounting mismatch")
+        gate_results = {
+            "status": "FATAL",
+            "profile": profile,
+            "failures": ["Critical Failure: export accounting mismatch"],
+            "warnings": [],
+            "metrics": {}
+        }
+        raise QualityGateError(gate_results, "Critical Failure: export accounting mismatch")
     
     # Normalize evidence data
     evidence = q_data.get("evidence", {}) or {}
     match_rate = float(evidence.get("exact_match_rate", 1.0))
     if match_rate < 1.0:
-        raise ValueError(f"Critical Failure: evidence exact-match rate below 100% ({match_rate})")
+        msg = f"Critical Failure: evidence exact-match rate below 100% ({match_rate})"
+        gate_results = {
+            "status": "FATAL",
+            "profile": profile,
+            "failures": [msg],
+            "warnings": [],
+            "metrics": {}
+        }
+        raise QualityGateError(gate_results, msg)
 
     invalid_source_types = _invalid_source_types(splits)
     if invalid_source_types:
-        raise ValueError(f"Critical Failure: invalid source_type values found: {', '.join(sorted(invalid_source_types))}")
+        msg = f"Critical Failure: invalid source_type values found: {', '.join(sorted(invalid_source_types))}"
+        gate_results = {
+            "status": "FATAL",
+            "profile": profile,
+            "failures": [msg],
+            "warnings": [],
+            "metrics": {}
+        }
+        raise QualityGateError(gate_results, msg)
 
     # Profile-specific checks
     gate_status = "PASS"
@@ -90,15 +128,66 @@ def assert_release_ready(
     if unknown_count > 0:
         msg = f"unknown canonicals detected (rate: {unknown_count:.2%})"
         if profile == "diagnostic_strict":
-            raise ValueError(f"CRITICAL FAIL: {msg}")
+            gate_results = {
+                "status": "FAIL",
+                "profile": profile,
+                "failures": [msg],
+                "warnings": [],
+                "metrics": {"unknown_canonical_rate": unknown_count}
+            }
+            raise QualityGateError(gate_results, f"CRITICAL FAIL: {msg}")
         failures.append(msg)
+
+    mapping_scope_unknown_count = int(q_data.get("canonicalization", {}).get("mapping_scope_unknown_count", 0))
+    if mapping_scope_unknown_count > 0:
+        msg = f"mapping_scope unknown detected ({mapping_scope_unknown_count})"
+        failures.append(msg)
+    rejected_rows = int(q_data.get("rejected_rows", 0) or 0)
+    reason_counts = q_data.get("reason_counts", {}) or {}
+    if rejected_rows > 0 and not reason_counts:
+        msg = "rejected_rows present but reason_counts is empty"
+        if profile == "diagnostic_strict":
+            failures.append(msg)
+        else:
+            warnings.append(msg)
+
+    provisional_rate = float(q_data.get("canonicalization", {}).get("provisional_rate", 0.0))
+    anchor_modifier_count = int(q_data.get("canonicalization", {}).get("anchor_modifier_count", 0))
+    full_review_evidence_rate = float(evidence.get("full_review_evidence_rate", 0.0))
+
+    if profile == "diagnostic_strict":
+        if provisional_rate > 0.25:
+            failures.append(f"provisional rate too high ({provisional_rate:.2%})")
+        if anchor_modifier_count == 0:
+            failures.append("anchor_modifier_count is zero")
+        if full_review_evidence_rate > 0.05:
+            failures.append(f"full_review_evidence_rate too high ({full_review_evidence_rate:.2%})")
+    else:
+        if provisional_rate > 0.70:
+            failures.append(f"provisional rate too high ({provisional_rate:.2%})")
+        elif provisional_rate > 0.50:
+            warnings.append(f"provisional rate warning ({provisional_rate:.2%})")
+        if full_review_evidence_rate > 0.30:
+            failures.append(f"full_review_evidence_rate too high ({full_review_evidence_rate:.2%})")
+        elif full_review_evidence_rate > 0.15:
+            warnings.append(f"full_review_evidence_rate warning ({full_review_evidence_rate:.2%})")
+        if anchor_modifier_count == 0:
+            warnings.append("anchor_modifier_count is zero")
         
     # 2. Novelty Overfiring -> FAIL
     novelty_dist = q_data.get("novelty_distribution", {})
     novel_rows = novelty_dist.get("novel", 0)
     novelty_rate = novel_rows / total
     if profile == "diagnostic_strict" and novelty_rate > 0.5:
-        raise ValueError(f"CRITICAL FAIL: novelty rate too high ({novelty_rate:.2%}) for diagnostic run")
+        msg = f"novelty rate too high ({novelty_rate:.2%}) for diagnostic run"
+        gate_results = {
+            "status": "FAIL",
+            "profile": profile,
+            "failures": [msg],
+            "warnings": [],
+            "metrics": {"novelty_rate": novelty_rate}
+        }
+        raise QualityGateError(gate_results, f"CRITICAL FAIL: {msg}")
     elif novelty_rate > 0.8:
         failures.append(f"extreme novelty rate detected: {novelty_rate:.2%}")
 
@@ -107,7 +196,15 @@ def assert_release_ready(
     unknown_provenance = mapping_dist.get("unknown", 0) + mapping_dist.get("none", 0)
     provenance_unknown_rate = unknown_provenance / max(1, sum(mapping_dist.values()))
     if profile == "diagnostic_strict" and provenance_unknown_rate > 0:
-        raise ValueError(f"CRITICAL FAIL: {unknown_provenance} interpretations have unknown mapping provenance")
+        msg = f"{unknown_provenance} interpretations have unknown mapping provenance"
+        gate_results = {
+            "status": "FAIL",
+            "profile": profile,
+            "failures": [msg],
+            "warnings": [],
+            "metrics": {"provenance_unknown_rate": provenance_unknown_rate}
+        }
+        raise QualityGateError(gate_results, f"CRITICAL FAIL: {msg}")
     elif provenance_unknown_rate > 0.1:
         failures.append(f"high unknown mapping provenance: {provenance_unknown_rate:.2%}")
 
@@ -120,7 +217,22 @@ def assert_release_ready(
     if failures:
         gate_status = "FAIL"
         if profile == "diagnostic_strict":
-             raise ValueError(f"Gate Failures ({profile}): " + "; ".join(failures))
+             gate_results = {
+                 "status": gate_status,
+                 "profile": profile,
+                 "failures": failures,
+                 "warnings": warnings,
+                "metrics": {
+                    "novelty_rate": novelty_rate,
+                    "provenance_unknown_rate": provenance_unknown_rate,
+                    "unknown_canonical_rate": unknown_count,
+                    "mapping_scope_unknown_count": mapping_scope_unknown_count,
+                    "provisional_rate": provisional_rate,
+                    "anchor_modifier_count": anchor_modifier_count,
+                    "full_review_evidence_rate": full_review_evidence_rate,
+                }
+             }
+             raise QualityGateError(gate_results, f"Gate Failures ({profile}): " + "; ".join(failures))
 
     return {
         "status": gate_status,
@@ -130,7 +242,11 @@ def assert_release_ready(
         "metrics": {
             "novelty_rate": novelty_rate,
             "provenance_unknown_rate": provenance_unknown_rate,
-            "unknown_canonical_rate": unknown_count
+            "unknown_canonical_rate": unknown_count,
+            "mapping_scope_unknown_count": mapping_scope_unknown_count,
+            "provisional_rate": provisional_rate,
+            "anchor_modifier_count": anchor_modifier_count,
+            "full_review_evidence_rate": full_review_evidence_rate,
         }
     }
 

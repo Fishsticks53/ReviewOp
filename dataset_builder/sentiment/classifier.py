@@ -41,8 +41,8 @@ class SentimentClassifier:
         from .prompts import build_batch_sentiment_prompt
         try:
             aspect_texts = [i.aspect_raw for i in interpretations]
-            prompt = build_batch_sentiment_prompt(row_text, aspect_texts)
-            response_text = self.client.generate(prompt).strip()
+            system_prompt, user_prompt = build_batch_sentiment_prompt(row_text, aspect_texts)
+            response_text = self.client.generate(user_prompt, system_prompt=system_prompt).strip()
             
             # Extract JSON from response
             if "```json" in response_text:

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import random
-from dataclasses import replace
 from pathlib import Path
 from typing import Sequence
 
@@ -26,7 +25,7 @@ from dataset_builder.schemas.benchmark_row import BenchmarkRow
 from dataset_builder.schemas.interpretation import Interpretation
 from dataset_builder.orchestrator.pipeline import run_builder_pipeline
 from dataset_builder.split.grouped_split import grouped_train_val_test_split
-from dataset_builder.verify.openai_verifier import OpenAIVerifier
+from dataset_builder.verify.llm_verifier import LLMVerifier
 from rich.progress import track, Progress
 
 
@@ -45,7 +44,18 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--test-ratio", type=float, default=0.1)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--strict", action="store_true")
+    parser.add_argument(
+        "--domain-mode",
+        choices=["generic_only", "generic_plus_domain", "generic_plus_learned", "full"],
+        default="full",
+    )
     parser.add_argument("--symptom-store", type=Path, default=None, help="Path to learned symptom patterns JSON")
+    parser.add_argument("--aspect-memory", type=Path, default=None, help="Path to aspect memory JSON")
+    parser.add_argument("--provisional-policy", choices=["loose", "strict", "memory_only"], default="strict")
+    parser.add_argument("--evidence-window-tokens", type=int, default=8)
+    parser.add_argument("--aspect-memory-auto-promote", action="store_true")
+    parser.add_argument("--max-workers", type=int, default=20, help="Concurrency for LLM stages")
     return parser
 
 
@@ -66,7 +76,7 @@ def resolve_input_path(path: Path) -> Path:
     return resolve_input_paths(path)[0]
 
 
-def build_config_from_args(args: argparse.Namespace, resolved_input_path: Path) -> BuilderConfig:
+def build_config_from_args(args: argparse.Namespace, resolved_input_paths: list[Path]) -> BuilderConfig:
     from dataset_builder.config import get_env_model
     input_path = Path(args.input)
     
@@ -77,7 +87,7 @@ def build_config_from_args(args: argparse.Namespace, resolved_input_path: Path) 
 
     cfg = BuilderConfig(
         input_dir=input_path if input_path.is_dir() else input_path.parent,
-        input_paths=(resolved_input_path,),
+        input_paths=tuple(resolved_input_paths),
         output_dir=args.output_dir,
         random_seed=args.seed,
         train_ratio=args.train_ratio,
@@ -90,7 +100,14 @@ def build_config_from_args(args: argparse.Namespace, resolved_input_path: Path) 
         llm_model=llm_model,
         dry_run=args.dry_run,
         overwrite=args.overwrite,
+        strict=args.strict,
         symptom_store_path=str(args.symptom_store) if args.symptom_store else None,
+        domain_mode=args.domain_mode,
+        provisional_policy=args.provisional_policy,
+        evidence_window_tokens=args.evidence_window_tokens,
+        aspect_memory_auto_promote=args.aspect_memory_auto_promote,
+        aspect_memory_path=str(args.aspect_memory) if args.aspect_memory else None,
+        max_workers=args.max_workers,
     )
     validate_config(cfg)
     return cfg
@@ -114,15 +131,12 @@ def load_reviews(paths: Sequence[Path]) -> list[RawReview]:
     return rows
 
 
-
-
 def main() -> None:
     from dataset_builder.profile.dataset_profiler import profile_dataset
     args = build_arg_parser().parse_args()
     paths = resolve_input_paths(args.input)
     rows = load_reviews(paths)
-    cfg = build_config_from_args(args, paths[0])
-    cfg = replace(cfg, input_paths=tuple(paths))
+    cfg = build_config_from_args(args, paths)
     rows = select_working_reviews(rows, cfg)
     
     profile = profile_dataset(rows)

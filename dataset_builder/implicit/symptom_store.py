@@ -157,6 +157,11 @@ def _phrase_in_text(phrase: str, text: str) -> bool:
     return _find_phrase_span(phrase, text) is not None
 
 
+STOP_WORDS = {
+    "the", "and", "was", "for", "with", "that", "this", "but", "not", "are", 
+    "from", "they", "have", "been", "will", "your", "very", "when", "into", "some"
+}
+
 def _find_phrase_span(phrase: str, text: str) -> tuple[int, int, str, str] | None:
     phrase = str(phrase or "").strip()
     text = str(text or "")
@@ -175,12 +180,16 @@ def _find_phrase_span(phrase: str, text: str) -> tuple[int, int, str, str] | Non
         if match:
             return match.start(), match.end(), text[match.start():match.end()], "lemma"
 
-    tokens = [token for token in re.findall(r"[a-z0-9']+", phrase_lower) if len(token) > 2]
+    tokens = [token for token in re.findall(r"[a-z0-9']+", phrase_lower) if len(token) > 2 and token not in STOP_WORDS]
     if not tokens:
         return None
     token_matches = [re.search(r"(?<!\w)" + re.escape(token) + r"(?!\w)", lowered) for token in tokens]
     token_matches = [match for match in token_matches if match is not None]
-    if len(token_matches) >= max(1, len(tokens) - 1):
+    
+    # Requirement: Must match at least 2 non-stopword tokens, or ALL if less than 2
+    min_required = max(2, len(tokens)) if len(tokens) <= 2 else max(2, len(tokens) - 1)
+    
+    if len(token_matches) >= min_required:
         start = min(match.start() for match in token_matches)
         end = max(match.end() for match in token_matches)
         

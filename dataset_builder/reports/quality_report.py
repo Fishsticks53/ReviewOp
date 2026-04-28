@@ -10,19 +10,24 @@ def build_quality_report(
     loaded_rows: int = 0,
     processed_rows: int = 0,
     rejected_rows: int = 0,
-    discarded_rows: int = 0
+    discarded_rows: int = 0,
+    runtime_reason_counts: dict[str, int] | None = None,
 ) -> QualityReport:
     counts = {split: len(rows) for split, rows in splits.items()}
     rejected_interps = 0
     reason_counts = Counter()
+    dropped_reason_counts = Counter()
     source_types = Counter()
     label_types = Counter()
     mapping_sources = Counter()
+    mapping_scopes = Counter()
+    mapping_layers = Counter()
     novelty = Counter()
     hardness = Counter()
     evidence_total = 0
     evidence_exact = 0
     full_review_evidence = 0
+    anchor_modifier_count = 0
     unknown_canonicals = 0
     total_gold = 0
     max_gold = 0
@@ -40,6 +45,11 @@ def build_quality_report(
                 source_types[str(getattr(interp, "source_type", "unknown") or "unknown")] += 1
                 label_types[str(getattr(interp, "label_type", "unknown") or "unknown")] += 1
                 mapping_sources[str(getattr(interp, "mapping_source", "none") or "none")] += 1
+                if str(getattr(interp, "mapping_source", "") or "") == "anchor_modifier":
+                    anchor_modifier_count += 1
+                mapping_scopes[str(getattr(interp, "mapping_scope", "unknown") or "unknown")] += 1
+                for layer in tuple(getattr(interp, "mapping_layers", ()) or ()):
+                    mapping_layers[str(layer)] += 1
                 if str(getattr(interp, "aspect_canonical", "") or "") == "unknown":
                     unknown_canonicals += 1
                 span = list(getattr(interp, "evidence_span", []) or [])
@@ -59,8 +69,18 @@ def build_quality_report(
                         if flag in ("llm_drop", "repair_failed", "low_quality"):
                             rejected_interps += 1
                             reason_counts[flag] += 1
+                            dropped_reason_counts[flag] += 1
                             
     total_exported = sum(counts.values())
+    if runtime_reason_counts:
+        for key, val in runtime_reason_counts.items():
+            reason_counts[str(key)] += int(val)
+            dropped_reason_counts[str(key)] += int(val)
+
+    row_reason_counts = {}
+    if rejected_rows > 0:
+        row_reason_counts["empty_gold_after_canonicalization"] = int(rejected_rows)
+
     return QualityReport(
         total_exported=total_exported, 
         export_counts=counts,
@@ -70,8 +90,12 @@ def build_quality_report(
         rejected_rows=rejected_rows,
         discarded_rows=discarded_rows,
         mapping_source_distribution=dict(mapping_sources),
+        mapping_scope_distribution=dict(mapping_scopes),
+        mapping_layer_distribution=dict(mapping_layers),
         rejected_interpretations=rejected_interps,
         reason_counts=dict(reason_counts),
+        row_rejection_reason_counts=row_reason_counts,
+        dropped_interpretation_reason_counts=dict(dropped_reason_counts),
         source_type_distribution=dict(source_types),
         label_type_distribution=dict(label_types),
         novelty_distribution=dict(novelty),
@@ -82,6 +106,9 @@ def build_quality_report(
         },
         canonicalization={
             "unknown_rate": unknown_canonicals / max(1, total_gold),
+            "mapping_scope_unknown_count": mapping_scopes.get("unknown", 0),
+            "provisional_rate": mapping_sources.get("provisional", 0) / max(1, total_gold),
+            "anchor_modifier_count": anchor_modifier_count,
         },
         gold_stats={
             "avg_gold_per_row": total_gold / max(1, total_exported),

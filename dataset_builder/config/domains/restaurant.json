@@ -1,5 +1,5 @@
 {
-    "broad_labels": ["food", "service", "good", "bad", "quality", "place", "thing"],
+    "broad_labels": ["food_quality", "service_quality", "service_speed", "ambience", "price", "value"],
     "latent_families": {
         "service_quality": ["support", "staff", "service", "help", "waiter", "rude", "friendly"],
         "food_quality": ["taste", "delicious", "food", "dish", "menu", "fresh"],
@@ -27,11 +27,26 @@
         "service": {
             "slow": "service_speed",
             "fast": "service_speed",
-            "quick": "service_speed"
+            "quick": "service_speed",
+            "prompt": "service_speed",
+            "friendly": "service_quality",
+            "rude": "service_quality"
         },
         "restaurant": {
             "nice": "ambience",
             "loud": "ambience"
+        },
+        "food": {
+            "tasty": "food_quality",
+            "delicious": "food_quality",
+            "bland": "food_quality",
+            "cold": "food_quality",
+            "fresh": "food_quality"
+        },
+        "price": {
+            "expensive": "value",
+            "cheap": "value",
+            "fair": "value"
         }
     }
 }

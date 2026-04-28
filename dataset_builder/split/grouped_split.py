@@ -3,6 +3,7 @@ from __future__ import annotations
 import random
 from collections import defaultdict
 from typing import Any
+from dataclasses import replace, is_dataclass
 
 
 def _group_id(row: Any) -> str:
@@ -38,4 +39,12 @@ def grouped_train_val_test_split(
         "val": groups[train_end:val_end],
         "test": groups[val_end:],
     }
-    return {split: [row for group in group_ids for row in by_group[group]] for split, group_ids in split_groups.items()}
+    out = {split: [row for group in group_ids for row in by_group[group]] for split, group_ids in split_groups.items()}
+    for split, rows_for_split in out.items():
+        for idx, row in enumerate(rows_for_split):
+            proto = {"random": "unused", "grouped": split, "domain_holdout": "unused"}
+            if is_dataclass(row):
+                rows_for_split[idx] = replace(row, split_protocol=proto)
+            elif isinstance(row, dict):
+                row["split_protocol"] = proto
+    return out

@@ -32,7 +32,11 @@ def assess_novelty(
     mapping_source: str = "none",
     evidence_supported: bool = True,
 ) -> NoveltyAssessment:
-    aspect = str(aspect_canonical or "").strip()
+    aspect = str(aspect_canonical or "").strip().lower()
+    
+    # 0. Unknown: If we don't have a name for it, it's a boundary case, not novel
+    if not aspect or aspect == "unknown":
+        return NoveltyAssessment("boundary", 0.4, "unknown_aspect_canonical")
     
     # 1. Known: Canonical is in the official registry AND high confidence
     if aspect and aspect != "unknown" and aspect in known_canonicals and mapping_confidence >= 0.75:

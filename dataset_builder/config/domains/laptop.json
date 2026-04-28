@@ -1,5 +1,5 @@
 {
-    "broad_labels": ["good", "bad", "quality", "works", "laptop", "computer"],
+    "broad_labels": ["quality", "display", "performance", "audio", "battery_life", "keyboard", "portability"],
     "latent_families": {
         "power": ["battery", "charging", "charger", "power", "plug", "cord"],
         "display": ["screen", "display", "brightness", "color", "pixels", "dim"],
@@ -15,9 +15,38 @@
         "weight": "portability",
         "speed": "performance",
         "fast": "performance",
-        "trackpad": "mouse",
-        "touchpad": "mouse",
+        "trackpad": "trackpad",
+        "touchpad": "trackpad",
         "keys": "keyboard",
-        "typing": "keyboard"
+        "typing": "keyboard",
+        "speaker": "audio",
+        "speakers": "audio"
+    },
+    "modifier_maps": {
+        "screen": {
+            "dim": "display",
+            "bright": "display",
+            "glare": "display",
+            "sharp": "display"
+        },
+        "battery": {
+            "weak": "battery_life",
+            "long": "battery_life",
+            "short": "battery_life",
+            "dead": "battery_life"
+        },
+        "laptop": {
+            "light": "portability",
+            "portable": "portability",
+            "heavy": "portability"
+        },
+        "keyboard": {
+            "stuck": "keyboard",
+            "clicky": "keyboard"
+        },
+        "speaker": {
+            "loud": "audio",
+            "quiet": "audio"
+        }
     }
 }
