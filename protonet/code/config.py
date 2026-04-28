@@ -104,8 +104,11 @@ class ProtonetConfig:
     compile_model: bool = False
 
     joint_label_separator: str = "__"
+    hard_negative_ratio: float = 0.5
+    hard_negative_top_k: int = 5
     min_examples_per_label: int = 4
     temperature_init: float = 1.0
+    training_label_mode: str = "joint"  # "aspect", "joint"
 
     def ensure_dirs(self) -> None:
         for path in [

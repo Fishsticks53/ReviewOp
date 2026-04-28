@@ -200,6 +200,7 @@ def run_builder_pipeline(
                 if key in runtime_metrics:
                     aspect_memory_metrics[key] = runtime_metrics[key]
         metrics["aspect_memory"] = aspect_memory_metrics
+        metrics["anchor_modifier_debug"] = getattr(cfg, "_anchor_modifier_debug", {}) or {}
         
         try:
             gate_results = assert_release_ready(rows_by_split, reports={"quality": quality}, leakage=leakage, profile=profile)

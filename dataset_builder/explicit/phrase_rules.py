@@ -81,6 +81,22 @@ def extract_dependency_phrases(text: str) -> list[dict[str, Any]]:
                             "modifier_terms": (token.text.lower(),),
                             "anchor_source": "nsubj_acomp"
                         })
+                        # Capture predicative verbs/adverbs/negations (e.g. "battery died quickly", "service not slow")
+                        extra_mods = []
+                        for hchild in head.children:
+                            if hchild.dep_ in ("advmod", "neg") and hchild.pos_ in ("ADV", "PART"):
+                                extra_mods.append(hchild.lemma_.lower())
+                        if head.pos_ == "VERB" and head.lemma_.lower() not in {"be"}:
+                            extra_mods.append(head.lemma_.lower())
+                        if extra_mods:
+                            phrases.append({
+                                "text": phrase_text,
+                                "span": (start, end),
+                                "type": "nsubj_predicate_event",
+                                "aspect_anchor": anchor_text,
+                                "modifier_terms": tuple(dict.fromkeys([token.lemma_.lower(), *extra_mods])),
+                                "anchor_source": "nsubj_predicate_event"
+                            })
 
         # Rule 3: Verb with a direct object (e.g. "improved quality")
         if token.pos_ == "VERB":

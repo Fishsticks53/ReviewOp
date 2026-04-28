@@ -10,7 +10,7 @@ import numpy as np
 
 try:
     from .config import ProtonetConfig
-    from .dataset_reader import write_jsonl
+    from .dataset_reader import as_list, write_jsonl
     from .progress import announce, track
 except ImportError:
     import importlib.util
@@ -24,12 +24,79 @@ except ImportError:
     sys.modules[_config_spec.name] = _config_module
     _config_spec.loader.exec_module(_config_module)
     ProtonetConfig = _config_module.ProtonetConfig
-    from dataset_reader import write_jsonl
+    from dataset_reader import as_list, write_jsonl
     from progress import announce, track
 
+import torch
 
-def build_joint_label(row: Dict[str, Any], separator: str = "__") -> str:
+def compute_label_similarity(
+    model: Any,
+    grouped: Dict[str, List[Dict[str, Any]]],
+    cfg: ProtonetConfig,
+) -> Dict[str, Dict[str, float]]:
+    """
+    Computes a similarity matrix between labels using the model's encoder.
+    Label representation = mean(embedding(label_name), mean(embedding(evidence_examples))).
+    """
+    labels = sorted(grouped.keys())
+    if not labels:
+        return {}
+
+    announce(f"[sim] Computing similarity matrix for {len(labels)} labels...")
+    model.eval()
+    
+    label_embeddings: List[torch.Tensor] = []
+    
+    with torch.no_grad():
+        for label in labels:
+            # 1. Embed the label name itself
+            # We treat the label name as a text string
+            name_item = {"review_text": label.replace(cfg.joint_label_separator, " ")}
+            name_emb = model.encode_items([name_item]) # [1, D]
+            
+            # 2. Embed a few evidence examples
+            examples = grouped[label]
+            if examples:
+                # Pick up to 5 examples to represent the label
+                subset = examples[:5]
+                example_items = []
+                for ex in subset:
+                    text = str(ex.get("evidence_sentence") or ex.get("review_text") or "")
+                    example_items.append({"review_text": text})
+                
+                if example_items:
+                    ex_embs = model.encode_items(example_items) # [N, D]
+                    mean_ex_emb = ex_embs.mean(dim=0, keepdim=True)
+                    # Combined representation: 50/50 label name and evidence
+                    combined = 0.5 * name_emb + 0.5 * mean_ex_emb
+                else:
+                    combined = name_emb
+            else:
+                combined = name_emb
+                
+            label_embeddings.append(combined)
+
+    # Cat and compute cosine similarity
+    all_embs = torch.cat(label_embeddings, dim=0) # [L, D]
+    all_embs = torch.nn.functional.normalize(all_embs, p=2, dim=1)
+    sim_matrix = torch.matmul(all_embs, all_embs.T).cpu().numpy() # [L, L]
+
+    # Convert to Dict[str, Dict[str, float]]
+    out: Dict[str, Dict[str, float]] = {}
+    for i, label_i in enumerate(labels):
+        out[label_i] = {}
+        for j, label_j in enumerate(labels):
+            if i == j:
+                continue
+            out[label_i][label_j] = float(sim_matrix[i, j])
+            
+    return out
+
+
+def build_joint_label(row: Dict[str, Any], separator: str = "__", mode: str = "joint") -> str:
     aspect = str(row.get("aspect_canonical") or row.get("aspect") or row.get("implicit_aspect") or "unknown").strip()
+    if mode == "aspect":
+        return aspect
     sentiment = str(row.get("sentiment") or "neutral").strip().lower() or "neutral"
     return f"{aspect}{separator}{sentiment}"
 
@@ -76,10 +143,23 @@ def _episode_cache_path(cfg: ProtonetConfig, split: str) -> Path:
     return _episode_cache_path_with_protocol(cfg, split, protocol=None)
 
 
+def _get_dataset_fingerprint(cfg: ProtonetConfig) -> str:
+    parts = ["manifest.json", "train.jsonl", "val.jsonl", "test.jsonl"]
+    hasher = hashlib.sha256()
+    for part in parts:
+        path = cfg.input_dir / part
+        if path.exists():
+            hasher.update(path.read_bytes())
+    return hasher.hexdigest()[:16]
+
+
 def _episode_cache_path_with_protocol(cfg: ProtonetConfig, split: str, protocol: str | None) -> Path:
     protocol_suffix = f"_p{protocol}" if protocol else ""
+    fingerprint = _get_dataset_fingerprint(cfg)
+    label_mode = getattr(cfg, "training_label_mode", "joint")
     return cfg.episode_cache_dir / (
         f"{cfg.input_type}_{split}{protocol_suffix}_n{cfg.n_way}_k{cfg.k_shot}_q{cfg.q_query}_"
+        f"mode-{label_mode}_v1_{fingerprint}_"
         f"seed{cfg.seed}_train{cfg.max_train_episodes}_eval{cfg.max_eval_episodes}.jsonl"
     )
 
@@ -127,7 +207,7 @@ def _dedupe_by_parent(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 def _group_examples(rows: List[Dict[str, Any]], cfg: ProtonetConfig) -> Dict[str, List[Dict[str, Any]]]:
     grouped: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
     for row in rows:
-        grouped[build_joint_label(row, cfg.joint_label_separator)].append(row)
+        grouped[build_joint_label(row, cfg.joint_label_separator, mode=cfg.training_label_mode)].append(row)
     return grouped
 
 
@@ -160,15 +240,24 @@ def _episode_row_from_example(row: Dict[str, Any], role: str, cfg: ProtonetConfi
         "label_type": row.get("label_type", "explicit"),
         "support_type": row.get("support_type", "unknown"),
         "mapping_source": row.get("mapping_source", "unknown"),
+        "mapping_scope": str(row.get("mapping_scope") or "unknown"),
+        "mapping_layers": as_list(row.get("mapping_layers")),
+        "evidence_scope": str(row.get("evidence_scope") or "unknown"),
+        "implicit_trigger": row.get("implicit_trigger"),
+        "matched_terms": as_list(row.get("matched_terms")),
+        "modifier_terms": as_list(row.get("modifier_terms")),
+        "conflict_resolution": str(row.get("conflict_resolution") or "none"),
+        "generic_parent": row.get("generic_parent"),
+        "aspect_subtype": row.get("aspect_subtype"),
         "source_type": str(row.get("source_type") or "unknown"),
-        "quality_flags": list(row.get("quality_flags") or []),
+        "quality_flags": as_list(row.get("quality_flags")),
         "confidence": float(row.get("confidence", 1.0)),
         "hardness_tier": str(row.get("hardness_tier") or "H0").upper(),
         "annotation_source": row.get("annotation_source", "unknown"),
-        "joint_label": build_joint_label(row, cfg.joint_label_separator),
+        "joint_label": build_joint_label(row, cfg.joint_label_separator, mode=cfg.training_label_mode),
         "role": role,
-        "gold_joint_labels": list(row.get("gold_joint_labels") or []),
-        "gold_interpretations": list(row.get("gold_interpretations") or []),
+        "gold_joint_labels": as_list(row.get("gold_joint_labels")),
+        "gold_interpretations": as_list(row.get("gold_interpretations")),
         "abstain_acceptable": bool(row.get("abstain_acceptable", False)),
         "ambiguity_type": row.get("ambiguity_type"),
         "benchmark_ambiguity_score": float(row.get("benchmark_ambiguity_score", 0.0)),
@@ -202,7 +291,12 @@ def _select_rows_excluding(
     return _select_rows(filtered, count, seed, salt)
 
 
-def _build_episodes_for_split(split: str, rows: List[Dict[str, Any]], cfg: ProtonetConfig) -> List[Dict[str, Any]]:
+def _build_episodes_for_split(
+    split: str, 
+    rows: List[Dict[str, Any]], 
+    cfg: ProtonetConfig,
+    similarity_matrix: Dict[str, Dict[str, float]] | None = None
+) -> List[Dict[str, Any]]:
     grouped = _group_examples(rows, cfg)
     labels = _eligible_labels(grouped, cfg)
     if len(labels) < cfg.n_way:
@@ -220,7 +314,15 @@ def _build_episodes_for_split(split: str, rows: List[Dict[str, Any]], cfg: Proto
     label_weights = _compute_label_weights(grouped, labels)
     while len(episodes) < max_episodes and attempt < max_attempts:
         attempt += 1
-        chosen_labels = _sample_labels_weighted(labels, label_weights, cfg.n_way, rng)
+        chosen_labels = _sample_labels_weighted(
+            labels, 
+            label_weights, 
+            cfg.n_way, 
+            rng,
+            similarity_matrix=similarity_matrix if split == "train" else None,
+            hard_ratio=cfg.hard_negative_ratio,
+            top_k=cfg.hard_negative_top_k
+        )
         support_set: List[Dict[str, Any]] = []
         query_set: List[Dict[str, Any]] = []
         support_parent_ids: set[str] = set()
@@ -303,17 +405,58 @@ def _compute_label_weights(grouped: Dict[str, List[Dict[str, Any]]], labels: Lis
     return out
 
 
-def _sample_labels_weighted(labels: List[str], weights: Dict[str, float], n_way: int, rng: random.Random) -> List[str]:
-    chosen: List[str] = []
+def _sample_labels_weighted(
+    labels: List[str],
+    weights: Dict[str, float],
+    n_way: int,
+    rng: random.Random,
+    similarity_matrix: Dict[str, Dict[str, float]] | None = None,
+    hard_ratio: float = 0.5,
+    top_k: int = 5,
+) -> List[str]:
+    if not labels:
+        return []
+    if len(labels) <= n_way:
+        return sorted(labels)
+
+    # 1. Pick a pivot label
     available = list(labels)
+    pivot_mass = [float(weights.get(label, 1.0)) for label in available]
+    pivot = rng.choices(available, weights=pivot_mass, k=1)[0]
+    chosen = [pivot]
+    available.remove(pivot)
+
+    # 2. Decide if we do hard negative sampling for this episode
+    do_hard = similarity_matrix and rng.random() < hard_ratio
+    
+    if do_hard:
+        # Get similarities for the pivot
+        pivot_sims = similarity_matrix.get(pivot, {})
+        # Sort neighbors by similarity score
+        neighbors = sorted(
+            [l for l in available if l in pivot_sims],
+            key=lambda l: pivot_sims[l],
+            reverse=True
+        )[:top_k]
+        
+        # Sample from neighbors if any
+        while neighbors and len(chosen) < n_way:
+            # We can use original weights to bias within neighbors
+            neighbor_mass = [float(weights.get(l, 1.0)) for l in neighbors]
+            pick = rng.choices(neighbors, weights=neighbor_mass, k=1)[0]
+            chosen.append(pick)
+            neighbors.remove(pick)
+            if pick in available:
+                available.remove(pick)
+
+    # 3. Fill remaining slots if needed
     while available and len(chosen) < n_way:
         mass = [float(weights.get(label, 1.0)) for label in available]
         pick = rng.choices(available, weights=mass, k=1)[0]
         chosen.append(pick)
         available.remove(pick)
-    if len(chosen) < n_way:
-        return sorted(labels)[:n_way]
-    return chosen
+
+    return sorted(chosen)
 
 
 def _weighted_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -332,6 +475,7 @@ def _weighted_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 def build_or_load_episode_sets(
     rows_by_split: Dict[str, List[Dict[str, Any]]],
     cfg: ProtonetConfig,
+    similarity_matrix: Dict[str, Dict[str, float]] | None = None,
 ) -> Dict[str, List[Dict[str, Any]]]:
     episodes_by_split: Dict[str, List[Dict[str, Any]]] = {}
     for split, rows in rows_by_split.items():
@@ -354,7 +498,7 @@ def build_or_load_episode_sets(
                 validate_episode_row(episode, cfg)
             episodes = rows
         else:
-            episodes = _build_episodes_for_split(split, rows, cfg)
+            episodes = _build_episodes_for_split(split, rows, cfg, similarity_matrix=similarity_matrix)
         episodes_by_split[split] = episodes
         write_jsonl(_episode_cache_path(cfg, split), track(episodes, total=len(episodes), desc=f"save:{split}", enabled=cfg.progress_enabled))
 
@@ -378,7 +522,7 @@ def build_or_load_episode_sets(
                         announce(f"Loaded cached {protocol_key} episodes from {cached_path}")
                         continue
                 try:
-                    protocol_episodes = _build_episodes_for_split(split, protocol_rows, cfg)
+                    protocol_episodes = _build_episodes_for_split(split, protocol_rows, cfg, similarity_matrix=None)
                 except ValueError as exc:
                     announce(f"Skipping protocol episode cache {protocol_key}: {exc}")
                     continue

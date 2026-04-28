@@ -48,6 +48,84 @@ def _extract_phrase_window(text: str, cue: str, window_tokens: int = 8) -> tuple
         return snippet, [0, len(snippet)]
     return snippet, [abs_start, abs_start + len(snippet)]
 
+def _span_hint_from_review_id(review_id: str) -> tuple[str, int, int] | None:
+    parts = str(review_id or "").split(":")
+    if len(parts) < 4:
+        return None
+    try:
+        hint_term = str(parts[-3] or "").strip().lower()
+        start = int(parts[-2]); end = int(parts[-1])
+        if start >= 0 and end > start:
+            return (hint_term, start, end)
+    except Exception:
+        return None
+    return None
+
+def _canonical_cue_aliases(canonical: str) -> list[str]:
+    aliases = {
+        "food_quality": ["food", "dish", "meal", "flavor", "taste"],
+        "service_quality": ["service", "staff", "server", "waiter", "waitress"],
+        "display": ["screen", "display", "lcd", "monitor"],
+        "performance": ["processor", "memory", "speed", "hard drive", "ram"],
+        "value": ["price", "cost", "worth", "value"],
+        "battery_life": ["battery", "charge", "charging", "lasted", "drain"],
+        "cleanliness": ["clean", "dirty", "smell", "sanitary"],
+        "delivery": ["delivery", "arrived", "shipping", "late"],
+        "customer_support": ["support", "help", "response", "agent"],
+        "support": ["support", "help", "response", "agent"],
+        "comfort": ["comfort", "comfortable", "noise", "fit"],
+        "durability": ["durable", "broke", "worn", "lasting"],
+        "reliability": ["reliable", "disconnect", "drop", "crash"],
+        "quality": ["quality", "build", "craftsmanship"],
+        "availability": ["available", "stock", "reservation"],
+        "design": ["design", "style", "look"],
+        "usability": ["easy", "use", "usability", "interface"],
+        "storage": ["storage", "space", "drive", "disk"],
+        "audio": ["audio", "sound", "speaker", "volume"],
+        "camera": ["camera", "webcam", "photo", "video"],
+        "connectivity": ["wifi", "bluetooth", "network", "connect"],
+    }
+    key = str(canonical or "").lower().strip()
+    return aliases.get(key, [])
+
+def _narrow_final_interpretation_evidence(row_text: str, row_id: str, interp: Interpretation, window_tokens: int = 8) -> Interpretation:
+    if interp.evidence_scope not in {"sentence", "full_review"} and str(interp.evidence_text or "").strip() != str(row_text or "").strip():
+        return interp
+    cues = []
+    cues.extend(list(interp.matched_terms or ()))
+    cues.extend(list(interp.modifier_terms or ()))
+    cues.append(str(interp.aspect_raw or "").replace("_", " "))
+    cues.extend(_canonical_cue_aliases(interp.aspect_canonical))
+    cues.append(str(interp.latent_family or "").replace("_", " "))
+    cues.extend(str(interp.latent_family or "").replace("_", " ").split())
+    cues.extend(str(interp.aspect_canonical or "").replace("_", " ").split())
+    seen = set()
+    for cue in [c.strip() for c in cues if str(c).strip()]:
+        low = cue.lower()
+        if low in seen:
+            continue
+        seen.add(low)
+        if low in row_text.lower():
+            txt, span = _extract_phrase_window(row_text, cue, window_tokens)
+            if txt and txt.strip() and txt.strip().lower() != row_text.strip().lower():
+                return replace(interp, evidence_text=txt, evidence_span=span, evidence_scope="phrase_window")
+    hint = _span_hint_from_review_id(row_id)
+    if hint:
+        hint_term, s, e = hint
+        compat_cues = [str(c).strip().lower() for c in cues if str(c).strip()]
+        compat = any(hint_term == c or hint_term in c or c in hint_term for c in compat_cues)
+        if compat and 0 <= s < e <= len(row_text):
+            txt, span = _extract_phrase_window(row_text, row_text[s:e], window_tokens)
+            if txt and txt.strip() and txt.strip().lower() != row_text.strip().lower():
+                return replace(interp, evidence_text=txt, evidence_span=span, evidence_scope="phrase_window")
+    opinion_cues = ("good", "great", "excellent", "poor", "bad", "slow", "fast", "friendly", "rude")
+    for cue in opinion_cues:
+        if cue in row_text.lower():
+            txt, span = _extract_phrase_window(row_text, cue, window_tokens)
+            if txt and txt.strip() and txt.strip().lower() != row_text.strip().lower():
+                return replace(interp, evidence_text=txt, evidence_span=span, evidence_scope="phrase_window")
+    return interp
+
 class PipelineStage(ABC):
     @abstractmethod
     def process(self, rows: list[BenchmarkRow], cfg: BuilderConfig) -> list[BenchmarkRow]:
@@ -114,16 +192,22 @@ class ExtractionStage(PipelineStage):
         
         max_workers = getattr(cfg, "max_workers", 4)
         processed = []
+        cfg.__dict__.setdefault("_anchor_modifier_debug", {})
+        cfg.__dict__["_anchor_modifier_debug"]["after_extraction_candidates_with_modifiers"] = 0
         try:
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
                 from concurrent.futures import as_completed
                 futures = [executor.submit(_extract_for_row, r, cfg.domain_mode, cfg.provisional_policy) for r in rows]
                 for future in as_completed(futures):
-                    processed.append(future.result())
+                    row = future.result()
+                    cfg.__dict__["_anchor_modifier_debug"]["after_extraction_candidates_with_modifiers"] += sum(1 for i in row.explicit_interpretations if tuple(getattr(i, "modifier_terms", ()) or ()))
+                    processed.append(row)
                     GLOBAL_STATS.record_row_processed()
         except PermissionError:
             for r in rows:
-                processed.append(_extract_for_row(r, cfg.domain_mode, cfg.provisional_policy))
+                row = _extract_for_row(r, cfg.domain_mode, cfg.provisional_policy)
+                cfg.__dict__["_anchor_modifier_debug"]["after_extraction_candidates_with_modifiers"] += sum(1 for i in row.explicit_interpretations if tuple(getattr(i, "modifier_terms", ()) or ()))
+                processed.append(row)
                 GLOBAL_STATS.record_row_processed()
         return processed
 
@@ -162,7 +246,13 @@ class InferenceStage(PipelineStage):
         from ..canonical.canonicalizer import canonicalize_interpretation
         from ..canonical.aspect_memory import AspectMemory
         from ..evidence.sentence_selector import select_best_sentence
-        memory = AspectMemory(cfg.aspect_memory_path) if cfg.aspect_memory_path else None
+        memory = AspectMemory(
+            cfg.aspect_memory_path,
+            auto_promote=cfg.aspect_memory_auto_promote,
+            review_queue_min_support=cfg.aspect_memory_review_queue_min_support,
+            review_queue_min_reviews=cfg.aspect_memory_review_queue_min_reviews,
+            review_queue_min_surface_forms=cfg.aspect_memory_review_queue_min_surface_forms,
+        ) if cfg.aspect_memory_path else None
         
         for row in rows:
             try:
@@ -416,8 +506,11 @@ class FusionStage(PipelineStage):
     def process(self, rows: list[BenchmarkRow], cfg: BuilderConfig) -> list[BenchmarkRow]:
         from ..fusion.merge_candidates import merge_explicit_implicit
         new_rows = []
+        cfg.__dict__.setdefault("_anchor_modifier_debug", {})
+        cfg.__dict__["_anchor_modifier_debug"]["after_fusion_candidates_with_modifiers"] = 0
         for row in rows:
             merged = merge_explicit_implicit(list(row.explicit_interpretations), list(row.implicit_interpretations))
+            cfg.__dict__["_anchor_modifier_debug"]["after_fusion_candidates_with_modifiers"] += sum(1 for i in merged if tuple(getattr(i, "modifier_terms", ()) or ()))
             logger.debug(f"Fusion {row.review_id}: explicit={len(row.explicit_interpretations)}, implicit={len(row.implicit_interpretations)} -> merged={len(merged)}")
             for i in merged:
                 if i.label_type == "implicit":
@@ -432,12 +525,22 @@ class CanonicalizationStage(PipelineStage):
         from ..canonical.broad_label_policy import prune_broad_labels
         from ..canonical.fragment_collapse import collapse_same_evidence_fragments
         from ..canonical.aspect_memory import AspectMemory
-        memory = AspectMemory(cfg.aspect_memory_path, auto_promote=cfg.aspect_memory_auto_promote) if cfg.aspect_memory_path else None
+        memory = AspectMemory(
+            cfg.aspect_memory_path,
+            auto_promote=cfg.aspect_memory_auto_promote,
+            review_queue_min_support=cfg.aspect_memory_review_queue_min_support,
+            review_queue_min_reviews=cfg.aspect_memory_review_queue_min_reviews,
+            review_queue_min_surface_forms=cfg.aspect_memory_review_queue_min_surface_forms,
+        ) if cfg.aspect_memory_path else None
         
         new_rows = []
+        cfg.__dict__.setdefault("_anchor_modifier_debug", {})
+        cfg.__dict__["_anchor_modifier_debug"]["after_canonicalization"] = 0
+        cfg.__dict__["_anchor_modifier_debug"]["after_pruning"] = 0
         for row in rows:
             # 1. Canonicalize
             canons = [canonicalize_interpretation(i, row.domain, domain_mode=cfg.domain_mode, provisional_policy=cfg.provisional_policy) for i in row.gold_interpretations]
+            cfg.__dict__["_anchor_modifier_debug"]["after_canonicalization"] += sum(1 for i in canons if i.mapping_source == "anchor_modifier")
             for i in canons:
                 if i.mapping_source == "memory_candidate":
                     if memory:
@@ -463,10 +566,13 @@ class CanonicalizationStage(PipelineStage):
             collapsed, _ = collapse_same_evidence_fragments(canons)
             # 3. Prune broad labels
             final_gold, _ = prune_broad_labels(collapsed, row.domain)
+            final_gold = [_narrow_final_interpretation_evidence(row.review_text, row.review_id, i, cfg.evidence_window_tokens) for i in final_gold]
+            cfg.__dict__["_anchor_modifier_debug"]["after_pruning"] += sum(1 for i in final_gold if i.mapping_source == "anchor_modifier")
             new_rows.append(replace(row, gold_interpretations=tuple(final_gold)))
         if memory:
             memory.save()
             memory.write_review_queue(Path(cfg.output_dir) / "aspect_memory_review_queue.json")
+            memory.write_summary(Path(cfg.output_dir) / "aspect_memory_summary.json")
         return new_rows
 
 class SentimentStage(PipelineStage):
@@ -502,8 +608,16 @@ class BenchmarkStage(PipelineStage):
         unique_rows = []
         
         from ..canonical.aspect_memory import AspectMemory
-        memory = AspectMemory(cfg.aspect_memory_path, auto_promote=cfg.aspect_memory_auto_promote) if cfg.aspect_memory_path else None
+        memory = AspectMemory(
+            cfg.aspect_memory_path,
+            auto_promote=cfg.aspect_memory_auto_promote,
+            review_queue_min_support=cfg.aspect_memory_review_queue_min_support,
+            review_queue_min_reviews=cfg.aspect_memory_review_queue_min_reviews,
+            review_queue_min_surface_forms=cfg.aspect_memory_review_queue_min_surface_forms,
+        ) if cfg.aspect_memory_path else None
         cfg.__dict__.setdefault("_aspect_memory_metrics", {})
+        cfg.__dict__.setdefault("_anchor_modifier_debug", {})
+        cfg.__dict__["_anchor_modifier_debug"]["after_final"] = 0
         for row in rows:
             try:
                 # 1. Dedupe by text
@@ -517,6 +631,8 @@ class BenchmarkStage(PipelineStage):
                     
                 # 3. Cap interpretations
                 final_gold = sorted(list(row.gold_interpretations), key=lambda i: i.canonical_confidence, reverse=True)[:8]
+                final_gold = [_narrow_final_interpretation_evidence(row.review_text, row.review_id, i, cfg.evidence_window_tokens) for i in final_gold]
+                cfg.__dict__["_anchor_modifier_debug"]["after_final"] += sum(1 for i in final_gold if i.mapping_source == "anchor_modifier")
                 
                 # 4. Calculate Ambiguity Score
                 sentiments = {i.sentiment for i in final_gold if i.sentiment != "unknown"}
@@ -565,6 +681,7 @@ class BenchmarkStage(PipelineStage):
         if memory:
             memory.save()
             memory.write_review_queue(Path(cfg.output_dir) / "aspect_memory_review_queue.json")
+            memory.write_summary(Path(cfg.output_dir) / "aspect_memory_summary.json")
             cfg.__dict__["_aspect_memory_metrics"]["promoted_entries_total"] = sum(1 for e in memory.entries.values() if e.status == "promoted")
             cfg.__dict__["_aspect_memory_metrics"]["review_queue_count"] = sum(1 for e in memory.entries.values() if e.status == "review_queue")
         return unique_rows

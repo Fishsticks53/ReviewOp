@@ -8,7 +8,7 @@ import sys
 try:
     from .config import METADATA_ROOT, OUTPUT_ROOT, ProtonetConfig, env_value, resolve_default_input_dir, seed_everything
     from .dataset_reader import load_input_dataset, write_json, write_jsonl
-    from .episode_builder import build_or_load_episode_sets
+    from .episode_builder import build_or_load_episode_sets, compute_label_similarity, _episode_cache_path, _group_examples
     from .evaluator import evaluate_episodes
     from .export_bundle import export_model_bundle, export_report
     from .model import ProtoNetModel
@@ -17,7 +17,7 @@ try:
 except ImportError:
     from config import METADATA_ROOT, OUTPUT_ROOT, ProtonetConfig, env_value, resolve_default_input_dir, seed_everything
     from dataset_reader import load_input_dataset, write_json, write_jsonl
-    from episode_builder import build_or_load_episode_sets
+    from episode_builder import build_or_load_episode_sets, compute_label_similarity, _episode_cache_path, _group_examples
     from evaluator import evaluate_episodes
     from export_bundle import export_model_bundle, export_report
     from model import ProtoNetModel
@@ -73,6 +73,10 @@ def _build_config(args: argparse.Namespace) -> ProtonetConfig:
         allow_model_download=args.allow_model_download,
         compile_model=args.compile_model,
         train_encoder=args.train_encoder,
+        training_label_mode=args.training_label_mode,
+        hard_negative_ratio=args.hard_negative_ratio,
+        hard_negative_top_k=args.hard_negative_top_k,
+        min_examples_per_label=args.min_examples_per_label,
     )
 
 
@@ -94,7 +98,15 @@ def run_train_local(args: argparse.Namespace) -> dict[str, object]:
     cfg.ensure_dirs()
     seed_everything(cfg.seed)
     rows_by_split, summary = _prepare_examples(cfg)
-    episodes_by_split = build_or_load_episode_sets(rows_by_split, cfg)
+    
+    similarity_matrix = None
+    if cfg.force_rebuild_episodes or any(not _episode_cache_path(cfg, s).exists() for s in ("train", "val", "test")):
+        # Only load model for similarity if we are actually building episodes
+        model = ProtoNetModel(cfg)
+        grouped = _group_examples(rows_by_split["train"], cfg)
+        similarity_matrix = compute_label_similarity(model, grouped, cfg)
+        
+    episodes_by_split = build_or_load_episode_sets(rows_by_split, cfg, similarity_matrix=similarity_matrix)
     result = train_model(cfg, episodes_by_split)
 
     # Calibrate using predictions already produced by train_model -- no extra eval pass needed.
@@ -238,6 +250,10 @@ def build_parser() -> argparse.ArgumentParser:
     common.add_argument("--compile-model", action="store_true")
     common.add_argument("--no-train-encoder", action="store_false", dest="train_encoder", default=True)
     common.add_argument("--ortho-weight", type=float, default=0.05)
+    common.add_argument("--training-label-mode", choices=["aspect", "joint"], default="joint")
+    common.add_argument("--hard-negative-ratio", type=float, default=0.5)
+    common.add_argument("--hard-negative-top-k", type=int, default=5)
+    common.add_argument("--min-examples-per-label", type=int, default=4)
 
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("train", help="Train, validate, test, and export", parents=[common])

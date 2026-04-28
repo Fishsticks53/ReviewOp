@@ -138,9 +138,7 @@ def evaluate_episodes(
                     
                     pred_set = {pred_label}
                     jaccard = len(true_set & pred_set) / max(1, len(true_set | pred_set))
-                    # Novelty components should not depend on any episodic temperature scaling
-                    # (e.g. entropy-based scaling inside episode_forward). Compute directly from
-                    # distances so evaluator and runtime_infer stay aligned.
+                    
                     dist2 = dist2_queries[row_index : row_index + 1]
                     min_distance_sq = float(dist2.min().item())
                     distance_score = max(0.0, min(1.0, min_distance_sq / (min_distance_sq + 1.0)))
@@ -215,6 +213,11 @@ def evaluate_episodes(
                         "ambiguity_type": query_row.get("ambiguity_type") if isinstance(query_row, dict) else None,
                         "novel_acceptable": bool(query_row.get("novel_acceptable", False)) if isinstance(query_row, dict) else False,
                         "source_type": str(query_row.get("source_type") or "unknown") if isinstance(query_row, dict) else "unknown",
+                        "label_type": str(query_row.get("label_type") or "unknown") if isinstance(query_row, dict) else "unknown",
+                        "mapping_scope": str(query_row.get("mapping_scope") or "unknown") if isinstance(query_row, dict) else "unknown",
+                        "mapping_source": str(query_row.get("mapping_source") or "unknown") if isinstance(query_row, dict) else "unknown",
+                        "evidence_scope": str(query_row.get("evidence_scope") or "unknown") if isinstance(query_row, dict) else "unknown",
+                        "domain": str(query_row.get("domain") or "unknown") if isinstance(query_row, dict) else "unknown",
                         "hardness_tier": str(query_row.get("hardness_tier") or "unknown") if isinstance(query_row, dict) else "unknown",
                         "gold_novel_cluster_id": str(query_row.get("novel_cluster_id") or "").strip() if isinstance(query_row, dict) else "",
                         "pred_novel_cluster_id": predicted_cluster_id,
@@ -336,13 +339,6 @@ def evaluate_episodes(
             "macro_f1": _protocol_macro_f1(protocol_groups[protocol]),
         }
 
-    source_type_breakdown: Dict[str, Dict[str, Any]] = {}
-    for source_type in sorted({str(row.get("source_type") or "unknown") for row in predictions}):
-        rows_for_source = [row for row in predictions if str(row.get("source_type") or "unknown") == source_type]
-        source_type_breakdown[source_type] = {
-            "count": len(rows_for_source),
-            "accuracy": float(np.mean([1.0 if row.get("correct") else 0.0 for row in rows_for_source])) if rows_for_source else 0.0,
-        }
     hardness_breakdown: Dict[str, Dict[str, Any]] = {}
     for hardness in sorted({str(row.get("hardness_tier") or "unknown") for row in predictions}):
         rows_for_hardness = [row for row in predictions if str(row.get("hardness_tier") or "unknown") == hardness]
@@ -350,6 +346,23 @@ def evaluate_episodes(
             "count": len(rows_for_hardness),
             "accuracy": float(np.mean([1.0 if row.get("correct") else 0.0 for row in rows_for_hardness])) if rows_for_hardness else 0.0,
         }
+
+    def _get_breakdown(field: str) -> Dict[str, Dict[str, Any]]:
+        breakdown: Dict[str, Dict[str, Any]] = {}
+        for val in sorted({str(row.get(field) or "unknown") for row in predictions}):
+            rows = [row for row in predictions if str(row.get(field) or "unknown") == val]
+            breakdown[val] = {
+                "count": len(rows),
+                "accuracy": float(np.mean([1.0 if row.get("correct") else 0.0 for row in rows])) if rows else 0.0,
+                "macro_f1": float(f1_score([r["true_label"] for r in rows], [r["pred_label"] for r in rows], average="macro")) if rows and len(set(r["true_label"] for r in rows)) > 0 else 0.0,
+            }
+        return breakdown
+
+    mapping_scope_breakdown = _get_breakdown("mapping_scope")
+    domain_breakdown = _get_breakdown("domain")
+    evidence_scope_breakdown = _get_breakdown("evidence_scope")
+    label_type_breakdown = _get_breakdown("label_type")
+    source_type_breakdown = _get_breakdown("source_type")
 
     metrics = {
         "split": split_name,
@@ -387,7 +400,13 @@ def evaluate_episodes(
             "domain_holdout": _protocol_payload("domain_holdout"),
         },
         "source_type_breakdown": source_type_breakdown,
+        "label_type_breakdown": label_type_breakdown,
+        "mapping_scope_breakdown": mapping_scope_breakdown,
+        "domain_breakdown": domain_breakdown,
+        "evidence_scope_breakdown": evidence_scope_breakdown,
         "hardness_breakdown": hardness_breakdown,
+        "explicit_accuracy": source_type_breakdown.get("explicit", {}).get("accuracy", 0.0),
+        "implicit_accuracy": source_type_breakdown.get("implicit_json", source_type_breakdown.get("implicit", {})).get("accuracy", 0.0),
         "per_aspect_accuracy": {aspect: float(sum(values) / max(1, len(values))) for aspect, values in sorted(per_aspect.items())},
         "calibration_ece": _expected_calibration_error(confidences, correctness),
         "low_confidence_rate": low_confidence_count / max(1, len(y_true)),

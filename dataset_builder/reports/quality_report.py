@@ -27,6 +27,8 @@ def build_quality_report(
     evidence_total = 0
     evidence_exact = 0
     full_review_evidence = 0
+    matched_term_total = 0
+    matched_term_hit = 0
     anchor_modifier_count = 0
     unknown_canonicals = 0
     total_gold = 0
@@ -64,6 +66,12 @@ def build_quality_report(
                             full_review_evidence += 1
                     except (TypeError, ValueError):
                         pass
+                terms = tuple(getattr(interp, "matched_terms", ()) or ())
+                if terms:
+                    matched_term_total += 1
+                    ev_low = evidence_text.lower()
+                    if any(str(t).lower() in ev_low for t in terms if str(t).strip()):
+                        matched_term_hit += 1
                 if interp and hasattr(interp, "quality_flags"):
                     for flag in interp.quality_flags:
                         if flag in ("llm_drop", "repair_failed", "low_quality"):
@@ -103,6 +111,8 @@ def build_quality_report(
         evidence={
             "exact_match_rate": evidence_exact / max(1, evidence_total),
             "full_review_evidence_rate": full_review_evidence / max(1, evidence_total),
+            "matched_term_in_evidence_rate": matched_term_hit / max(1, matched_term_total),
+            "matched_term_missing_count": max(0, matched_term_total - matched_term_hit),
         },
         canonicalization={
             "unknown_rate": unknown_canonicals / max(1, total_gold),

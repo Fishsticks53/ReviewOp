@@ -57,21 +57,68 @@ class TrainingResult:
     prototype_bank: PrototypeBank
 
 
-def _supervised_contrastive_loss(embeddings: torch.Tensor, labels: List[str], temperature: float) -> torch.Tensor:
-    if len(labels) < 2:
+def _supervised_contrastive_loss(
+    embeddings: torch.Tensor,
+    items: List[Dict[str, Any]],
+    temperature: float,
+) -> torch.Tensor:
+    if len(items) < 2:
         return embeddings.new_tensor(0.0)
-    label_to_id = {label: idx for idx, label in enumerate(sorted(set(labels)))}
-    label_tensor = torch.tensor([label_to_id[label] for label in labels], device=embeddings.device)
-    similarity = torch.matmul(embeddings, embeddings.T) / temperature
-    mask = torch.eye(similarity.size(0), device=embeddings.device, dtype=torch.bool)
-    similarity = similarity.masked_fill(mask, -1e9)
-    positive_mask = (label_tensor.unsqueeze(0) == label_tensor.unsqueeze(1)) & ~mask
-    if positive_mask.sum() == 0:
+
+    # 1. Build soft positive mask
+    # Similarity = 1.0 for exact label match
+    # Similarity = 0.5 for same latent_family match
+    # Similarity = 0.0 otherwise
+    num_items = len(items)
+    mask = torch.zeros((num_items, num_items), device=embeddings.device, dtype=embeddings.dtype)
+    
+    for i in range(num_items):
+        item_i = items[i]
+        label_i = str(item_i.get("joint_label") or item_i.get("aspect") or "")
+        family_i = str(item_i.get("latent_family") or "unknown")
+        
+        for j in range(num_items):
+            if i == j:
+                continue
+            item_j = items[j]
+            label_j = str(item_j.get("joint_label") or item_j.get("aspect") or "")
+            family_j = str(item_j.get("latent_family") or "unknown")
+            
+            if label_i == label_j and label_i != "":
+                mask[i, j] = 1.0
+            elif family_i == family_j and family_i != "unknown":
+                mask[i, j] = 0.5
+
+    if mask.sum() == 0:
         return embeddings.new_tensor(0.0)
-    log_prob = similarity - torch.logsumexp(similarity, dim=1, keepdim=True)
-    mean_log_prob_pos = (positive_mask.float() * log_prob).sum(dim=1) / positive_mask.float().sum(dim=1).clamp(min=1.0)
-    valid = positive_mask.any(dim=1)
-    return -mean_log_prob_pos[valid].mean()
+
+    # 2. Compute similarity matrix
+    # embeddings should be normalized
+    sim = torch.matmul(embeddings, embeddings.T) / temperature
+    
+    # 3. Compute weighted SupCon loss
+    # exp(sim)
+    exp_sim = torch.exp(sim - torch.max(sim, dim=1, keepdim=True)[0])
+    
+    # Denominator: sum of all exp(sim) except self
+    # We can use mask=torch.eye to zero out self-similarity
+    self_mask = torch.eye(num_items, device=embeddings.device)
+    denom = (exp_sim * (1 - self_mask)).sum(dim=1, keepdim=True).clamp(min=1e-8)
+    
+    # log_prob = sim - log(denom)
+    log_prob = (sim - torch.max(sim, dim=1, keepdim=True)[0]) - torch.log(denom)
+    
+    # Weighted average of log_prob for positives
+    weighted_log_prob = (mask * log_prob).sum(dim=1)
+    weights_sum = mask.sum(dim=1).clamp(min=1e-8)
+    
+    # Final loss is negative mean of weighted log probs where we have positives
+    has_positives = mask.sum(dim=1) > 0
+    if not has_positives.any():
+        return embeddings.new_tensor(0.0)
+        
+    loss = - (weighted_log_prob[has_positives] / weights_sum[has_positives]).mean()
+    return loss
 
 
 def _use_cuda_amp(cfg: ProtonetConfig) -> bool:
@@ -122,7 +169,7 @@ def _warmup_representations(model: ProtoNetModel, cfg: ProtonetConfig, optimizer
             desc=f"warmup:{epoch}/{cfg.warmup_epochs}",
             enabled=cfg.progress_enabled,
         )
-        loss = _supervised_contrastive_loss(embeddings, labels, temperature=cfg.contrastive_temperature)
+        loss = _supervised_contrastive_loss(embeddings, items, temperature=cfg.contrastive_temperature)
         loss.backward()
         optimizer.step()
         optimizer.zero_grad(set_to_none=True)
@@ -229,8 +276,8 @@ def _episode_loss_with_weights(
         
         if cfg.contrastive_weight > 0:
             embeddings = torch.cat([out.support_embeddings, out.query_embeddings], dim=0)
-            labels = [_joint_label_from_item(item, cfg.joint_label_separator) for item in (list(episode.get("support_set", [])) + list(episode.get("query_set", [])))]
-            loss = loss + cfg.contrastive_weight * _supervised_contrastive_loss(embeddings, labels, temperature=cfg.contrastive_temperature)
+            items = list(episode.get("support_set", [])) + list(episode.get("query_set", []))
+            loss = loss + cfg.contrastive_weight * _supervised_contrastive_loss(embeddings, items, temperature=cfg.contrastive_temperature)
             
         if cfg.ortho_weight > 0:
             # Orthogonal penalty between prototypes to enhance feature discriminativity

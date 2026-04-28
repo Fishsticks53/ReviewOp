@@ -154,6 +154,7 @@ def assert_release_ready(
     provisional_rate = float(q_data.get("canonicalization", {}).get("provisional_rate", 0.0))
     anchor_modifier_count = int(q_data.get("canonicalization", {}).get("anchor_modifier_count", 0))
     full_review_evidence_rate = float(evidence.get("full_review_evidence_rate", 0.0))
+    matched_term_in_evidence_rate = float(evidence.get("matched_term_in_evidence_rate", 1.0))
 
     if profile == "diagnostic_strict":
         if provisional_rate > 0.25:
@@ -162,6 +163,8 @@ def assert_release_ready(
             failures.append("anchor_modifier_count is zero")
         if full_review_evidence_rate > 0.05:
             failures.append(f"full_review_evidence_rate too high ({full_review_evidence_rate:.2%})")
+        if matched_term_in_evidence_rate < 0.95:
+            warnings.append(f"matched_term_in_evidence_rate warning ({matched_term_in_evidence_rate:.2%})")
     else:
         if provisional_rate > 0.70:
             failures.append(f"provisional rate too high ({provisional_rate:.2%})")
@@ -173,6 +176,8 @@ def assert_release_ready(
             warnings.append(f"full_review_evidence_rate warning ({full_review_evidence_rate:.2%})")
         if anchor_modifier_count == 0:
             warnings.append("anchor_modifier_count is zero")
+        if matched_term_in_evidence_rate < 0.85:
+            warnings.append(f"matched_term_in_evidence_rate warning ({matched_term_in_evidence_rate:.2%})")
         
     # 2. Novelty Overfiring -> FAIL
     novelty_dist = q_data.get("novelty_distribution", {})
@@ -230,6 +235,7 @@ def assert_release_ready(
                     "provisional_rate": provisional_rate,
                     "anchor_modifier_count": anchor_modifier_count,
                     "full_review_evidence_rate": full_review_evidence_rate,
+                    "matched_term_in_evidence_rate": matched_term_in_evidence_rate,
                 }
              }
              raise QualityGateError(gate_results, f"Gate Failures ({profile}): " + "; ".join(failures))
@@ -247,6 +253,7 @@ def assert_release_ready(
             "provisional_rate": provisional_rate,
             "anchor_modifier_count": anchor_modifier_count,
             "full_review_evidence_rate": full_review_evidence_rate,
+            "matched_term_in_evidence_rate": matched_term_in_evidence_rate,
         }
     }
 

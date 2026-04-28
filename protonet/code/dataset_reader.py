@@ -24,6 +24,16 @@ except ImportError:
     from progress import track
 
 
+def as_list(value: Any) -> List[Any]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return list(value)
+    if isinstance(value, tuple):
+        return list(value)
+    return [value]
+
+
 VALID_SPLITS = ("train", "val", "test")
 REQUIRED_BENCHMARK_FILES = tuple(f"{split}.jsonl" for split in VALID_SPLITS) + ("manifest.json",)
 
@@ -173,7 +183,16 @@ def _label_from_interpretation(
         "confidence": float(interp.get("canonical_confidence", interp.get("annotator_support", 1))),
         "support_type": str(interp.get("support_type") or "unknown"),
         "mapping_source": str(interp.get("mapping_source") or "unknown"),
-        "quality_flags": list(interp.get("quality_flags") or []),
+        "mapping_scope": str(interp.get("mapping_scope") or "unknown"),
+        "mapping_layers": as_list(interp.get("mapping_layers")),
+        "evidence_scope": str(interp.get("evidence_scope") or "unknown"),
+        "implicit_trigger": interp.get("implicit_trigger"),
+        "matched_terms": as_list(interp.get("matched_terms")),
+        "modifier_terms": as_list(interp.get("modifier_terms")),
+        "conflict_resolution": str(interp.get("conflict_resolution") or "none"),
+        "generic_parent": interp.get("generic_parent"),
+        "aspect_subtype": interp.get("aspect_subtype"),
+        "quality_flags": as_list(interp.get("quality_flags")),
         "split": split,
         "abstain_acceptable": bool(abstain_acceptable),
         "ambiguity_type": str(ambiguity_type or "").strip() or None,
@@ -189,7 +208,7 @@ def _label_from_interpretation(
     }
 
 
-def validate_benchmark_rows(rows: List[Dict[str, Any]], split: str) -> tuple[List[Dict[str, Any]], str]:
+def validate_benchmark_rows(rows: List[Dict[str, Any]], split: str, mode: str = "joint") -> tuple[List[Dict[str, Any]], str]:
     if not rows:
         raise ValueError(f"No benchmark rows found for split {split}")
     expanded: List[Dict[str, Any]] = []
@@ -236,7 +255,10 @@ def validate_benchmark_rows(rows: List[Dict[str, Any]], split: str) -> tuple[Lis
                 or "unknown"
             ).strip()
             sentiment = _normalize_sentiment(interp.get("sentiment"))
-            gold_joint_labels.append(f"{aspect}__{sentiment}")
+            if mode == "aspect":
+                gold_joint_labels.append(aspect)
+            else:
+                gold_joint_labels.append(f"{aspect}__{sentiment}")
         for interp_idx, interp in enumerate(interpretations, start=1):
             if not isinstance(interp, dict):
                 continue
@@ -286,7 +308,7 @@ def load_input_dataset(cfg: ProtonetConfig) -> tuple[Dict[str, List[Dict[str, An
     for split in VALID_SPLITS:
         path = split_file(cfg.input_dir, split)
         raw_rows = read_split_rows(path, progress_enabled=cfg.progress_enabled)
-        rows, detected_format = validate_benchmark_rows(raw_rows, split)
+        rows, detected_format = validate_benchmark_rows(raw_rows, split, mode=cfg.training_label_mode)
         rows_by_split[split] = rows
     summary = DatasetSummary(
         split_sizes={split: len(rows) for split, rows in rows_by_split.items()},
